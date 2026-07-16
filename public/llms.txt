@@ -1,0 +1,30 @@
+# SEO AI Audit
+
+> Free, anonymous tool: paste any article URL and get an AI-search readiness
+> audit back. No account, no signup, nothing stored server-side.
+
+## What it does
+
+Audits a single web page across four lenses and returns 0-100 scores plus
+evidence-backed findings:
+
+- AEO (Answer Engine Optimization) — does the page lead with a
+  self-contained answer an AI assistant can lift verbatim?
+- GEO (Generative Engine Optimization) — structure, headings, and semantic
+  markup that make the page easy for a model to parse.
+- Citability — stat density, checkable sources, and quotable sentences an
+  AI Overview can cite by name.
+- AI Overview readiness — the specific blockers stopping this page from
+  being pulled into a generated answer.
+
+## Routes
+
+- `/` — landing page with the URL input; start here.
+- `/audit?url=<encoded-url>` — results page for a given URL. Stateless:
+  reopening this URL re-runs the audit rather than loading a saved report.
+
+## How to use
+
+POST the target URL to run an audit; results stream back as they complete.
+There is no API key, no rate-limit tier, and no persisted history — every
+request is a fresh, one-shot analysis of the single URL supplied.
