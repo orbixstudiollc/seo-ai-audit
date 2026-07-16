@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1783760818678,
+      "tag": "0000_unique_imperial_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783763391422,
+      "tag": "0001_lumpy_talos",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783781855279,
+      "tag": "0002_youthful_leech",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783799716964,
+      "tag": "0003_tough_groot",
+      "breakpoints": true
+    }
+  ]
+}

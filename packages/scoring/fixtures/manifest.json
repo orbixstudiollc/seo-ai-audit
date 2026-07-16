@@ -1,0 +1,50 @@
+[
+  {
+    "file": "01-excellent-a.md",
+    "expectedTier": "excellent",
+    "expectedRankPosition": 1,
+    "notes": "Topic: choosing a PM tool. Answer-first intro (54 words, 3 sentences, no fluff opener — S1 scores 100). 7/8 H2/H3 headings interrogative (88% — S3=90). 4/8 sections open with a 40-60-word snippet-ready paragraph (S2=50) and 4/8 land in the 100-300-word chunkability band (S4=50) — the FAQ's three short Q&A answers are intentionally terse rather than snippet-length, which caps both signals at 50 instead of 100. Tightest average sentence length in the set (12.7 words/sentence, 94% <=25 words — S5=90). 9 digit-bearing stats and 2 real markdown citation links (S8=35, S9=80). One bulleted checklist (S6). Closes with a 3-question FAQ block, each answered in its first sentence, plus a fenced FAQPage JSON-LD block (paste-input fixtures can't trigger the literal <script type=\"application/ld+json\"> that S7 checks for, so this scores like every other fixture here — absent-but-generatable, S7=40; the fence is illustrative for the eventual HTML-input/JSON-LD-generation path). Ranked 1st: verified against the real DET signal code as the strongest combined profile in the set, and the only fixture with a perfect S11 (zero pronoun-led sections, zero generic headings)."
+  },
+  {
+    "file": "02-excellent-b.md",
+    "expectedTier": "excellent",
+    "expectedRankPosition": 2,
+    "notes": "Topic: what vector search is. Same excellent-tier profile as 01: answer-first intro (59 words, 3 sentences — S1=100), 7/8 interrogative headings (88% — S3=90), 4/8 sections snippet-ready (S2=50) and 4/8 in the chunkability band (S4=50), one bulleted list (S6), a 3-question FAQ block with the same illustrative FAQPage JSON-LD fence (S7 scores identically to every paste-input fixture, S7=40). 8 digit-bearing stats and 2 citation links (S8=30, S9=55) — close to 01 but not quite as dense. Ranked 2nd, just behind 01: slightly longer average sentence length (13.4 vs. 12.7 words — S5=85) and one FAQ answer opens with a pronoun ('They're closely related but not identical...' — the only pronoun-led section in either excellent article, costing S11 5 points: 95 vs. 01's 100). Both excellent articles are close together by design and clear of the rest of the set on every DET signal that carries AEO weight."
+  },
+  {
+    "file": "03-good-a.md",
+    "expectedTier": "good",
+    "expectedRankPosition": 3,
+    "notes": "Topic: writing content briefs. Carries over the structural strengths of the excellent tier — answer-first intro (63 words, 3 sentences — S1=100), 4/5 interrogative headings (80% — S3=80), and the only fixture where every H2/H3 section opens with a qualifying 40-60-word paragraph (5/5 — S2=100) — but deliberately has zero stats and zero citations (S8=0, S9=0, vs. 6-9 stats and 1-2 links in every article ranked above it), and no FAQ/JSON-LD. Sections run short (max 91 words), so none clear S4's 100-300-word band (S4=0) despite the strong S2. Because S8/S9 are both zero, the GEO and Citability lenses — which weight stat/citation density heavily — actually score this article below both mediocre-tier articles on those two lenses specifically (verified against the real weight table), even though its structure is well above mediocre; that's the deliberate point of this fixture, testing whether clean structure alone can carry GEO/Citability (it can't and shouldn't). The missing S8/S9 pair is why it ranks below excellent overall, but its near-perfect AEO-relevant structure (S1/S2/S3/S11) keeps its AEO and AI-Overview signals in excellent-tier territory."
+  },
+  {
+    "file": "04-good-b.md",
+    "expectedTier": "good",
+    "expectedRankPosition": 4,
+    "notes": "Topic: technical SEO checklist. Has real stats and citations (6 digit-bearing stats, 1 link, one 'according to a 2023 crawl audit' attribution — S8=35, S9=75) and a closing checklist (S6), unlike 03 — but the direct answer (the 5-item checklist) is withheld until the 3rd paragraph of the intro instead of the 1st. That's a semantic placement flaw the DET S1 heuristic can't actually detect (S1 only checks paragraph-1 length and fluff-openers, and this paragraph passes cleanly — S1=100 here, same as every other good/excellent fixture); it's deliberately left for the RUB layer to catch instead (S12 answer-directness, S18 AI-Overview blockers), testing whether the 35-40% RUB weight share earns its keep where DET is structurally blind. One heading is declarative instead of interrogative (3/4 vs. 03's 4/5 — S3=75). On DET signals alone this fixture actually out-scores 03 (real stats/citations beat zero stats/citations under the current weight table); its rank-4 position is a bet that the RUB rubric will penalize the buried, harder-to-extract answer enough to place it behind 03's cleaner AEO structure — exactly the kind of DET/RUB disagreement this fixture set exists to surface, not an oversight."
+  },
+  {
+    "file": "05-mediocre-a.md",
+    "expectedTier": "mediocre",
+    "expectedRankPosition": 5,
+    "notes": "Topic: how backlinks work. Uses a literal generic heading 'Introduction' directly under the H1 with no intro paragraph of its own, so S1 finds no answer-first paragraph to score at all (S1=0 — the H1 section is empty, not just short). Headings are declarative rather than interrogative (0/5 — S3=0). Each section is a single 90-140 word paragraph with no separate snippet-ready lead-in (only 1/5 sections qualify for S2's 40-60-word window — S2=20). Sentences run long and meandering (avg 27.7 words/sentence, only 39% under 25 words — S5=50, clearly weaker than the good tier's ~16-17 word average). Citations and stats are bare-minimum: one unlinked 'according to search engineers' attribution and zero digit characters (S8=0, S9=35 from the attribution alone) — non-zero, but far weaker than any good/excellent article. No lists (S6=0). Two generic headings, 'Introduction' and 'Conclusion' (S11's generic-heading check)."
+  },
+  {
+    "file": "06-mediocre-b.md",
+    "expectedTier": "mediocre",
+    "expectedRankPosition": 6,
+    "notes": "Topic: content repurposing for small teams. Same generic-heading, single-paragraph-per-section profile as 05 (0/4 interrogative headings — S3=0, no lists — S6=0, no snippet-ready openers — S2=0), but strictly worse on citations and sentence control: zero citations of any kind (S9=0 vs. 05's one attribution), zero digit characters anywhere (S8=0, tied with 05), and longer, more run-on sentences (avg 36.2 words/sentence vs. 05's 27.7, both around 38-39% under 25 words — S5=30, weaker than 05's 50). Ranked below 05 on the combined weight of these differences. Note: 06's single paragraphs happen to land in S4's 100-300-word 'ideal chunkability' band more often than 05's shorter ones (S4=75 vs. 40) — a known quirk of a purely length-based signal rewarding a coincidentally-sized wall of run-on prose rather than real chunkability — and is outweighed here by 06's worse S3/S5/S9."
+  },
+  {
+    "file": "07-poor-a.md",
+    "expectedTier": "poor",
+    "expectedRankPosition": 7,
+    "notes": "Topic: why blogging still works. Opens with the deny-listed fluff phrase 'In today's fast-paced world' (matches S1's exact phrase list, triggering the fluff-opener penalty); heavily opinion-framed throughout ('I think', 'in my honest opinion', 'in my experience'). The body is one 566-word wall-of-text paragraph (594 words total for the piece) with zero heading structure beyond the title, so S2/S3/S4/S11 all score 0 and S4 additionally takes the >400-word wall penalty. Zero stats or citations (S8=0, S9=0). That single paragraph still breaks into 7 recognizable sentences under the naive splitter (avg 66 words/sentence — S5=15), a marginally less extreme run-on than 08's 2-sentence chain."
+  },
+  {
+    "file": "08-poor-b.md",
+    "expectedTier": "poor",
+    "expectedRankPosition": 8,
+    "notes": "Topic: keyword research basics. Worst of the set. Same fluff-opener/opinion-framing/zero-heading/zero-stat/zero-citation profile as 07 (S1/S2/S3/S4/S8/S9/S11 all identical failure pattern), but its wall-of-text paragraph runs longer (623 words vs. 07's 566; 638 words total for the piece vs. 07's 594) and the naive sentence splitter finds only 2 breaks in it versus 07's 7, for a far more extreme run-on (avg 159.5 words/'sentence' vs. 07's 66 — both quantize to the same S5=15 floor, but the raw gap shows 08 is the more severe failure). No closing structure at all beyond a single short sign-off line."
+  }
+]

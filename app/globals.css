@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+:root {
+  /* ============================================================
+     Design system — Swiss / editorial, light-first, data-dense.
+     ONE sharp accent (--accent-ink). Semantic color is reserved for
+     the score scale (red -> amber -> green) and is ALWAYS paired with
+     a text/glyph cue in the UI (see lib/audit/scoreScale.ts) so it is
+     never color-only for colorblind users.
+     ============================================================ */
+
+  /* Surfaces — deliberately light (independent of the body dark-flip). */
+  --surface-0: oklch(98.5% 0.002 255); /* app canvas */
+  --surface-1: #ffffff; /* raised panel */
+  --surface-2: oklch(97% 0.003 255); /* inset / sunken */
+  --surface-3: oklch(94.5% 0.004 255); /* deeper inset, code wells */
+  --line: oklch(91% 0.005 255); /* hairline */
+  --line-strong: oklch(83% 0.008 255);
+
+  --text-1: oklch(24% 0.012 265); /* primary ink */
+  --text-2: oklch(46% 0.014 265); /* secondary */
+  --text-3: oklch(52% 0.012 265); /* tertiary / mono labels — WCAG AA (>=4.7:1 on the app surfaces) */
+
+  --accent-ink: oklch(48% 0.19 266); /* the one sharp accent */
+  --accent-tint: oklch(95.5% 0.03 266);
+  --accent-line: oklch(80% 0.09 266);
+
+  /* Semantic score scale. */
+  --score-weak: oklch(55% 0.2 27);
+  --score-weak-tint: oklch(95.5% 0.035 27);
+  --score-mid: oklch(53% 0.14 66); /* amber, darkened to WCAG AA as text (>=4.6:1); scale stays red->amber->green */
+  --score-mid-tint: oklch(95.5% 0.05 80);
+  --score-strong: oklch(54% 0.13 158);
+  --score-strong-tint: oklch(95.5% 0.04 160);
+  --score-empty: oklch(72% 0.008 265);
+
+  /* Findings severity — reuse the score hues so the whole surface reads
+     as one system; blocker=weak, gap=mid, weak-signal=neutral ink. */
+  --sev-blocker: var(--score-weak);
+  --sev-blocker-tint: var(--score-weak-tint);
+  --sev-gap: var(--score-mid);
+  --sev-gap-tint: var(--score-mid-tint);
+  --sev-weak: oklch(50% 0.02 265);
+  --sev-weak-tint: oklch(96% 0.004 265);
+
+  /* Diff */
+  --diff-add-tint: oklch(96% 0.045 158);
+  --diff-add-line: oklch(80% 0.1 158);
+  --diff-del-tint: oklch(96.5% 0.03 27);
+  --diff-del-line: oklch(85% 0.07 27);
+
+  /* Motion */
+  --dur-fast: 120ms;
+  --dur: 260ms;
+  --dur-slow: 520ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Legacy aliases — older surfaces still use bg-background / text-foreground /
+     text-accent utilities. They now resolve into the one system above so every
+     page shares a single palette. New code should use the tokens directly. */
+  --background: var(--surface-1);
+  --foreground: var(--text-1);
+  --accent: var(--accent-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Design-system utilities (bg-surface-1, text-text-2, border-line, …). */
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-line: var(--accent-line);
+  --color-score-weak: var(--score-weak);
+  --color-score-mid: var(--score-mid);
+  --color-score-strong: var(--score-strong);
+  --color-sev-blocker: var(--sev-blocker);
+  --color-sev-gap: var(--sev-gap);
+  --color-sev-weak: var(--sev-weak);
+}
+
+/* Light-first everywhere: one deliberate light theme with one sharp accent.
+   Full dark-mode support is future work — until then every surface (auth,
+   list, settings, workbench) renders the same, so navigating never flickers
+   between themes. */
+body {
+  background: var(--surface-0);
+  color: var(--text-1);
+  color-scheme: light;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.workbench {
+  background: var(--surface-0);
+  color: var(--text-1);
+}
+
+/* Score re-animation and all token transitions are compositor-friendly
+   (transform/opacity) and disabled under reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  [data-animate],
+  [data-animate] * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+@keyframes wb-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.wb-skeleton {
+  animation: wb-pulse 1.4s var(--ease-in-out) infinite;
+}
