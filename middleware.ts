@@ -19,6 +19,11 @@ export function middleware(request: NextRequest): NextResponse {
 
 // Only run on the dashboard. Everything else (`/`, `/login`, `/signup`,
 // `/api/auth/*`, static assets) is untouched and publicly reachable.
+//
+// runtime: "nodejs" -- better-auth/cookies pulls in @better-auth/core utils
+// that aren't Edge-compatible; Vercel's Edge Function bundler rejects them.
+// Node.js middleware avoids that without changing the cookie-only check above.
 export const config = {
   matcher: ["/app/:path*"],
+  runtime: "nodejs",
 };
