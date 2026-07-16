@@ -154,4 +154,45 @@ describe("fetchArticle — failure modes", () => {
       message: expect.stringContaining("paste the article text"),
     });
   });
+
+  it("aborts the in-flight fetch when the caller's external signal fires", async () => {
+    let fetchStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      fetchStarted = resolve;
+    });
+    fetchMock.mockImplementation(
+      (_url: URL, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init.signal as AbortSignal;
+          fetchStarted();
+          if (signal.aborted) reject(signal.reason as Error);
+          else signal.addEventListener("abort", () => reject(signal.reason as Error));
+        }),
+    );
+    const controller = new AbortController();
+    const promise = fetchArticle(PAGE, { signal: controller.signal });
+    // Wait until fetchArticle has actually reached the in-flight fetch() call
+    // (and attached its abort listener) before firing the external abort —
+    // otherwise the abort could race ahead of the listener, per JS's
+    // microtask scheduling, and never be observed.
+    await started;
+    controller.abort();
+    await expect(promise).rejects.toMatchObject({ kind: "fetch_failed" });
+  });
+
+  it("rejects when the external signal is already aborted before the fetch settles", async () => {
+    fetchMock.mockImplementation(
+      (_url: URL, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init.signal as AbortSignal;
+          if (signal.aborted) reject(signal.reason as Error);
+          else signal.addEventListener("abort", () => reject(signal.reason as Error));
+        }),
+    );
+    const controller = new AbortController();
+    controller.abort();
+    await expect(fetchArticle(PAGE, { signal: controller.signal })).rejects.toMatchObject({
+      kind: "fetch_failed",
+    });
+  });
 });

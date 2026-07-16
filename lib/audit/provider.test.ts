@@ -1,101 +1,58 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { generateText } from "ai";
-import { buildCustomModel, modelIdFor } from "./provider";
+import type { LanguageModel } from "ai";
+import { buildServerModel, serverModelId } from "./provider";
 
 /**
- * Regression coverage for two request-path bugs found by actually calling a
- * live third-party endpoint (a raw curl succeeded; the AI-SDK-driven call
- * 404'd) rather than by reading the SDK's types:
- *
- * 1. `@ai-sdk/anthropic`'s `createAnthropic({baseURL})` appends `/messages`
- *    directly — it does NOT insert `/v1`. A bare host (the form this app's
- *    own "API Endpoint" field asks for) 404s unless `/v1` is added first.
- * 2. `createOpenAI(...)` called directly targets OpenAI's newer Responses API
- *    (`/responses`) by default; third-party OpenAI-compatible proxies almost
- *    universally implement the classic Chat Completions API instead.
- *
- * These assert the actual URL a request would hit, captured via a fetch spy
- * that throws before any real network call — no live endpoint needed to
- * keep this failing loudly if either SDK's default path ever changes again.
+ * Coverage for the v1 server-key model factory: the test-mock escape hatch
+ * (so no suite ever spends a real key or requires ANTHROPIC_API_KEY), and the
+ * fixed tier -> model id mapping the audit cache/prompt logic relies on.
  */
 
-function captureRequestUrl(): { spy: ReturnType<typeof vi.fn>; urlOf: () => string } {
-  const spy = vi.fn(async (input: RequestInfo | URL) => {
-    throw new Error(`captured:${typeof input === "string" ? input : input.toString()}`);
-  });
-  vi.stubGlobal("fetch", spy);
-  return {
-    spy,
-    urlOf: () => {
-      const call = spy.mock.calls[0]?.[0] as RequestInfo | URL | undefined;
-      return call ? (typeof call === "string" ? call : call.toString()) : "";
-    },
-  };
+/** `LanguageModel` also admits a bare provider-id string; every concrete model object carries `.modelId`. */
+function modelIdOf(model: LanguageModel): string {
+  return typeof model === "string" ? model : model.modelId;
 }
 
+const ORIGINAL_ENV = { ...process.env };
+
 afterEach(() => {
-  vi.unstubAllGlobals();
+  process.env = { ...ORIGINAL_ENV };
+  vi.unstubAllEnvs();
 });
 
-describe("buildCustomModel — request path construction", () => {
-  it("anthropic format: inserts /v1 before /messages for a bare base URL", async () => {
-    const { urlOf } = captureRequestUrl();
-    const model = buildCustomModel("sk-test", {
-      baseUrl: "https://api.example.com",
-      apiFormat: "anthropic",
-      cheapModel: "claude-haiku-4.5",
-      strongModel: "claude-sonnet-5",
-    }, "claude-haiku-4.5");
-
-    await generateText({ model, prompt: "ping", maxOutputTokens: 1, maxRetries: 0 }).catch(() => {});
-
-    expect(urlOf()).toBe("https://api.example.com/v1/messages");
-  });
-
-  it("anthropic format: strips a trailing slash before inserting /v1 (no double slash)", async () => {
-    const { urlOf } = captureRequestUrl();
-    const model = buildCustomModel("sk-test", {
-      baseUrl: "https://api.example.com/",
-      apiFormat: "anthropic",
-      cheapModel: "claude-haiku-4.5",
-      strongModel: "claude-sonnet-5",
-    }, "claude-haiku-4.5");
-
-    await generateText({ model, prompt: "ping", maxOutputTokens: 1, maxRetries: 0 }).catch(() => {});
-
-    expect(urlOf()).toBe("https://api.example.com/v1/messages");
-  });
-
-  it("openai format: hits the classic chat/completions route, not the newer responses route", async () => {
-    const { urlOf } = captureRequestUrl();
-    const model = buildCustomModel("sk-test", {
-      baseUrl: "https://api.example.com/v1",
-      apiFormat: "openai",
-      cheapModel: "gpt-compatible-model",
-      strongModel: "gpt-compatible-model-strong",
-    }, "gpt-compatible-model");
-
-    await generateText({ model, prompt: "ping", maxOutputTokens: 1, maxRetries: 0 }).catch(() => {});
-
-    expect(urlOf()).toBe("https://api.example.com/v1/chat/completions");
-    expect(urlOf()).not.toContain("/responses");
+describe("serverModelId", () => {
+  it("resolves a fixed model id per tier", () => {
+    expect(serverModelId("cheap")).toBe("claude-haiku-4-5-20251001");
+    expect(serverModelId("strong")).toBe("claude-sonnet-5");
   });
 });
 
-describe("modelIdFor — custom provider", () => {
-  const custom = {
-    baseUrl: "https://api.example.com",
-    apiFormat: "anthropic" as const,
-    cheapModel: "cheap-id",
-    strongModel: "strong-id",
-  };
+describe("buildServerModel — AUDIT_TEST_MOCK escape hatch", () => {
+  it("returns the deterministic mock model when AUDIT_TEST_MOCK=1, without ANTHROPIC_API_KEY", () => {
+    process.env.AUDIT_TEST_MOCK = "1";
+    delete process.env.ANTHROPIC_API_KEY;
 
-  it("resolves the cheap and strong tiers from the custom config, not the named-provider MODEL_IDS map", () => {
-    expect(modelIdFor("custom", "cheap", custom)).toBe("cheap-id");
-    expect(modelIdFor("custom", "strong", custom)).toBe("strong-id");
+    const cheap = buildServerModel("cheap");
+    const strong = buildServerModel("strong");
+
+    expect(modelIdOf(cheap)).toBe("mock-cheap");
+    expect(modelIdOf(strong)).toBe("mock-strong");
+  });
+});
+
+describe("buildServerModel — real key path", () => {
+  it("throws a clear error when ANTHROPIC_API_KEY is missing", () => {
+    delete process.env.AUDIT_TEST_MOCK;
+    delete process.env.ANTHROPIC_API_KEY;
+
+    expect(() => buildServerModel("cheap")).toThrow(/ANTHROPIC_API_KEY/);
   });
 
-  it("throws if called for \"custom\" without a config, rather than silently resolving nothing", () => {
-    expect(() => modelIdFor("custom", "cheap")).toThrow();
+  it("builds a real Anthropic model when a key is configured", () => {
+    delete process.env.AUDIT_TEST_MOCK;
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test-key";
+
+    const model = buildServerModel("strong");
+    expect(modelIdOf(model)).toBe("claude-sonnet-5");
   });
 });

@@ -30,11 +30,20 @@ export interface FetchedArticle {
 
 export async function fetchArticle(
   url: string,
-  opts?: { timeoutMs?: number }, // test seam only; production callers omit it
+  opts?: {
+    timeoutMs?: number; // test seam only; production callers omit it
+    /** Aborts the in-flight fetch when the caller (e.g. a disconnected client) cancels. */
+    signal?: AbortSignal;
+  },
 ): Promise<FetchedArticle> {
   let target = await assertSafeUrl(url);
 
   const controller = new AbortController();
+  const onExternalAbort = (): void => controller.abort(opts?.signal?.reason);
+  if (opts?.signal) {
+    if (opts.signal.aborted) onExternalAbort();
+    else opts.signal.addEventListener("abort", onExternalAbort);
+  }
   const timer = setTimeout(
     () =>
       controller.abort(
@@ -116,6 +125,7 @@ export async function fetchArticle(
     throw toImportError(err, controller.signal);
   } finally {
     clearTimeout(timer);
+    if (opts?.signal) opts.signal.removeEventListener("abort", onExternalAbort);
   }
 }
 
