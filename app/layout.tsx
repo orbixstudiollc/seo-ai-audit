@@ -12,13 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Private self-hosted app: a plain title, no OG/Twitter/marketing metadata
-// (the landing page was removed in the open-source pivot). `robots.ts`
-// disallows crawlers, so social preview cards would never be fetched anyway.
+// Minimal clean-slate metadata. Real marketing metadata (OG/Twitter cards,
+// descriptions) ships with the Phase 1 landing page — see specs/phase-1.md.
 export const metadata: Metadata = {
   title: {
-    default: "AEO/GEO Optimizer",
-    template: "%s — AEO/GEO Optimizer",
+    default: "SEO AI Audit",
+    template: "%s — SEO AI Audit",
   },
 };
 

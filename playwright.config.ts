@@ -1,21 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * E2E config for the workbench journey (test/e2e/workbench.spec.ts).
+ * E2E config for the anonymous audit journey (test/e2e/*.spec.ts).
  *
- * The dev server is booted with the e2e escape hatches the app understands:
- *   - E2E_PGLITE=1     -> db/client uses an in-process, migration-applied PGlite
- *                         Postgres, so no external database is needed;
- *   - AUDIT_TEST_MOCK=1 -> buildByokModel returns a deterministic mock model,
- *                         so audits never call a real provider or spend a key.
- * A test-only /api/test/seed route (also gated by E2E_PGLITE) signs a user in
- * through real Better Auth and stores an encrypted BYOK key. Everything else is
- * the real app: real routing, real server actions, real SSE, real rendering.
+ * The dev server is booted with one escape hatch the app understands:
+ *   - AUDIT_TEST_MOCK=1 -> the audit route uses a deterministic mock model,
+ *                          so audits never call a real provider or spend a key.
+ * Everything else is the real app: real routing, real SSE, real rendering.
+ * No database and no auth — the tool is anonymous and stateless.
  */
 
 const PORT = Number(process.env.E2E_PORT ?? 3111);
-// Throwaway 32-byte key — only ever encrypts the fake seeded BYOK key.
-const ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
 
 export default defineConfig({
   testDir: "./test/e2e",
@@ -32,19 +27,13 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: `npx next dev -p ${PORT}`,
-    url: `http://localhost:${PORT}/login`,
+    url: `http://localhost:${PORT}/`,
     reuseExistingServer: false,
     timeout: 180_000,
     stdout: "pipe",
     stderr: "pipe",
     env: {
-      E2E_PGLITE: "1",
       AUDIT_TEST_MOCK: "1",
-      ENCRYPTION_KEY,
-      BETTER_AUTH_SECRET: "e2e-better-auth-secret-0123456789abcdef",
-      BETTER_AUTH_URL: `http://localhost:${PORT}`,
-      // Present but unused (PGlite is active); keeps any stray reference happy.
-      DATABASE_URL: "postgres://e2e:e2e@localhost:5432/e2e",
     },
   },
 });

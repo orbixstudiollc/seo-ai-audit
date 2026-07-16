@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "audits_running_cache_key_idx" ON "audits" USING btree ("user_id","content_hash","rubric_version","model_id") WHERE "audits"."status" = 'running';

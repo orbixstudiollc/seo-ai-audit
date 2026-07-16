@@ -10,10 +10,8 @@ pnpm install
 
 That is enough for the entire test suite — no database, no API keys, no env file:
 
-- `pnpm test` injects a throwaway `ENCRYPTION_KEY`/`DATABASE_URL` via `test/setup/env.ts`; integration tests run against an in-process PGlite Postgres with the real migrations applied.
-- `pnpm e2e` boots its own dev server with `E2E_PGLITE=1` (in-process Postgres) and `AUDIT_TEST_MOCK=1` (deterministic mock LLM) — see `playwright.config.ts`.
-
-To run the app itself against a real database, follow the self-host quickstart in [README.md](README.md) (`cp .env.example .env`, fill it in, `pnpm db:migrate`, `pnpm dev`).
+- `pnpm test` runs the pure-TypeScript unit suites (scoring engine, import/export, audit derivation).
+- `pnpm e2e` boots its own dev server with `AUDIT_TEST_MOCK=1` (deterministic mock LLM) — see `playwright.config.ts`.
 
 Before opening a PR, all four must be green:
 

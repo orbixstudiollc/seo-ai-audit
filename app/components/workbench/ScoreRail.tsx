@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import type { Lens, RubSignalResult, ScoreBreakdown } from "@aeo/scoring";
-import type { AuditErrorKind } from "@/lib/audit/types";
+import type { AuditErrorKind, AuditStreamPhase } from "@/lib/audit/types";
 import { ScoreTile } from "@/app/components/ui/ScoreTile";
 import { Button } from "@/app/components/ui/Button";
 import { LENS_META, LENS_ORDER } from "@/lib/audit/signalMeta";
-import type { AuditStreamPhase } from "@/app/hooks/useAuditStream";
 import { EeatStrip } from "./EeatStrip";
 
 type Props = {

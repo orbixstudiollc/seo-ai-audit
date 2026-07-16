@@ -1,4 +1,4 @@
-import type { ApiKeyProvider } from "../keys/types";
+import type { ApiKeyProvider } from "./types";
 
 /**
  * Client-safe pre-run cost estimate. This lives apart from

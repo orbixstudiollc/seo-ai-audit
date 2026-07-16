@@ -95,6 +95,12 @@ export interface WorkbenchAudit {
 
 // --- SSE stream envelope ----------------------------------------------------
 
+/** LLM provider selector for the audit's rubric calls. */
+export type ApiKeyProvider = "openai" | "anthropic" | "custom";
+
+/** Client-side lifecycle of one streamed audit run. */
+export type AuditStreamPhase = "idle" | "connecting" | "streaming" | "done" | "error";
+
 export type AuditErrorKind =
   | "no_key"
   | "invalid_key"

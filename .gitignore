@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# conductor working files (attachments, transcripts) — never commit
+.context/
