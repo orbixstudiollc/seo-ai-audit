@@ -8,11 +8,10 @@ import type {
 } from "@aeo/scoring";
 
 /**
- * App-layer audit contracts shared across the workbench UI, the SSE consumer
- * hook, and the (sibling-owned) /api/audit route. The scoring engine returns a
- * ScoreBreakdown (scores only); everything below — findings, rewrites, the
- * stream envelope — is app-layer data the route derives from call 1 / call 2
- * and persists to the `audits` table's jsonb columns.
+ * App-layer audit contracts shared by the /api/audit route (producer) and the
+ * results UI's SSE consumer (WS3). This is the v1 anonymous shape — the exact
+ * TypeScript source of truth for docs/DATA-CONTRACT.md. No persistence: every
+ * type here describes one in-flight stream, not a stored row.
  */
 
 // --- Findings (derived from LLM call 1 / the RUB rubric) --------------------
@@ -64,57 +63,39 @@ export interface AuditRewrites {
   hunks: RewriteHunk[];
 }
 
-// --- What the server component hands the client workbench -------------------
+// --- Fetched-page metadata ---------------------------------------------------
 
-export interface WorkbenchDocument {
-  id: string;
+/** Fetched-page metadata, the first event on every stream. */
+export interface PageMeta {
+  /** URL as submitted. */
+  url: string;
+  /** URL after redirects (≤3 hops), the one actually audited. */
+  finalUrl: string;
   title: string;
-  source: "paste" | "url";
-  sourceUrl: string | null;
-  rawContent: string;
   wordCount: number;
-}
-
-export type AuditPhaseStatus = "pending" | "done" | "failed";
-
-export interface WorkbenchAudit {
-  id: string;
-  status: "running" | "completed" | "failed";
-  scoresStatus: AuditPhaseStatus;
-  rewritesStatus: AuditPhaseStatus;
-  scores: ScoreBreakdown | null;
-  findings: AuditFindings | null;
-  rewrites: AuditRewrites | null;
-  modelId: string;
-  createdAt: string;
-  /** Persisted failure reason (audits.error). Populated by the recovery read
-   *  (getAuditStatus) so a resumed client surfaces the user-friendly provider
-   *  message instead of a generic failure. */
-  error?: string | null;
+  /** ISO timestamp of the fetch. */
+  fetchedAt: string;
 }
 
 // --- SSE stream envelope ----------------------------------------------------
 
-/** LLM provider selector for the audit's rubric calls. */
-export type ApiKeyProvider = "openai" | "anthropic" | "custom";
-
 /** Client-side lifecycle of one streamed audit run. */
 export type AuditStreamPhase = "idle" | "connecting" | "streaming" | "done" | "error";
 
+/** v1 anonymous error kinds. */
 export type AuditErrorKind =
-  | "no_key"
-  | "invalid_key"
-  | "rate_limit"
-  | "quota"
-  | "auth"
-  | "already_running"
-  | "server";
+  | "invalid_url" // failed validation after stream start (rare)
+  | "fetch_failed" // network error, non-2xx, timeout, SSRF-blocked
+  | "unsupported_content" // non-HTML, no extractable article, too large
+  | "rate_limit" // per-IP bucket exhausted; retryAfter set
+  | "server"; // anything else (incl. LLM provider failures)
 
 export type AuditStreamEvent =
+  | { type: "meta"; page: PageMeta }
   | { type: "signals"; signals: Record<DetSignalId, DetSignalResult> }
   | { type: "scores"; scores: ScoreBreakdown; findings: AuditFindings }
   | { type: "rewrites"; rewrites: AuditRewrites }
-  | { type: "done"; auditId: string }
+  | { type: "done" }
   | { type: "error"; kind: AuditErrorKind; message: string; retryAfter?: number };
 
 // Re-exported for consumers that only import from this module.

@@ -61,6 +61,8 @@ export interface GenerateRewritesInput {
   doc: ParsedDocument;
   scoreBreakdown: ScoreBreakdown;
   model: LanguageModel;
+  /** Aborts the call when the client disconnects mid-stream. */
+  abortSignal?: AbortSignal;
 }
 
 /** Short human labels for the signal ids, so the prompt can name what's weak. */
@@ -188,6 +190,7 @@ export async function generateRewrites(input: GenerateRewritesInput): Promise<Au
     schema: rewriteSchema,
     prompt: buildRewritePrompt(input.doc, input.scoreBreakdown),
     temperature: 0.3,
+    abortSignal: input.abortSignal,
   });
   return { hunks: toHunks(object) };
 }

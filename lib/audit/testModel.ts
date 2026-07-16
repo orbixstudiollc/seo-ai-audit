@@ -4,10 +4,11 @@ import type { Tier } from "./provider";
 import { E2E_INTRO_AFTER, E2E_WEAK_INTRO } from "./e2eFixture";
 
 /**
- * E2E-only deterministic LLM mock for the audit pipeline. Activated by
- * AUDIT_TEST_MOCK=1 (set only by the Playwright dev server); `buildByokModel`
- * returns one of these instead of a real @ai-sdk provider, so the browser e2e
- * runs the whole two-call pipeline offline, at zero cost, with no provider key.
+ * Deterministic LLM mock for the audit pipeline. Activated by
+ * AUDIT_TEST_MOCK=1 (set by the integration test suite and the Playwright dev
+ * server); `buildServerModel` returns one of these instead of a real
+ * @ai-sdk/anthropic model, so tests and e2e runs the whole two-call pipeline
+ * offline, at zero cost, with no ANTHROPIC_API_KEY required.
  *
  * This is the app-layer sibling of packages/scoring/src/testModel.ts's
  * `buildMockLanguageModel`: same MockLanguageModelV4 seam, but it also serves
@@ -79,6 +80,6 @@ function fixedModel(object: unknown, modelId: string): LanguageModel {
 /** The mock model for a pipeline tier: the RUB rubric (cheap) or the rewrite generator (strong). */
 export function e2eMockModel(tier: Tier): LanguageModel {
   return tier === "cheap"
-    ? fixedModel(RUBRIC_RESPONSE, "gpt-5-mini")
-    : fixedModel(REWRITE_RESPONSE, "gpt-5");
+    ? fixedModel(RUBRIC_RESPONSE, "mock-cheap")
+    : fixedModel(REWRITE_RESPONSE, "mock-strong");
 }
