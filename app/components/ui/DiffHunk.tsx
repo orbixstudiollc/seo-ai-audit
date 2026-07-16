@@ -9,9 +9,11 @@ export type HunkStatus = "pending" | "accepted" | "rejected";
 type Props = {
   hunk: RewriteHunk;
   status: HunkStatus;
-  onAccept: () => void;
-  onReject: () => void;
-  onReset: () => void;
+  onAccept?: () => void;
+  onReject?: () => void;
+  onReset?: () => void;
+  /** v1 (anonymous, no editable doc): before/after only, no accept/reject footer. */
+  readOnly?: boolean;
 };
 
 const KIND_LABEL: Record<RewriteHunk["kind"], string> = {
@@ -21,10 +23,11 @@ const KIND_LABEL: Record<RewriteHunk["kind"], string> = {
 };
 
 /**
- * One before/after rewrite hunk with accept/reject. Accepting mutates the
- * working document (handled by the parent) and triggers an estimated re-score.
+ * One before/after rewrite hunk. In editable mode (workbench, pre-v1) accept
+ * mutates the working document and triggers an estimated re-score; `readOnly`
+ * (v1, anonymous — no editable doc) drops the accept/reject/undo footer.
  */
-export function DiffHunk({ hunk, status, onAccept, onReject, onReset }: Props) {
+export function DiffHunk({ hunk, status, onAccept, onReject, onReset, readOnly }: Props) {
   const target = hunk.targetSignal ? SIGNAL_META[hunk.targetSignal] : null;
 
   return (
@@ -62,25 +65,27 @@ export function DiffHunk({ hunk, status, onAccept, onReject, onReset }: Props) {
         </div>
       </div>
 
-      <footer className="flex items-center justify-between gap-2 px-3 py-2">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-text-3">
-          {status === "accepted" ? "Applied to working doc" : status === "rejected" ? "Dismissed" : "Review"}
-        </span>
-        {status === "pending" ? (
-          <span className="flex gap-1.5">
-            <Button size="sm" variant="ghost" onClick={onReject}>
-              Reject
-            </Button>
-            <Button size="sm" variant="primary" onClick={onAccept}>
-              Accept
-            </Button>
+      {!readOnly && (
+        <footer className="flex items-center justify-between gap-2 px-3 py-2">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-text-3">
+            {status === "accepted" ? "Applied to working doc" : status === "rejected" ? "Dismissed" : "Review"}
           </span>
-        ) : (
-          <Button size="sm" variant="ghost" onClick={onReset}>
-            Undo
-          </Button>
-        )}
-      </footer>
+          {status === "pending" ? (
+            <span className="flex gap-1.5">
+              <Button size="sm" variant="ghost" onClick={onReject}>
+                Reject
+              </Button>
+              <Button size="sm" variant="primary" onClick={onAccept}>
+                Accept
+              </Button>
+            </span>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={onReset}>
+              Undo
+            </Button>
+          )}
+        </footer>
+      )}
     </article>
   );
 }
