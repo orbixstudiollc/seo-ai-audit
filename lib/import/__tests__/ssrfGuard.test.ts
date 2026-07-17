@@ -4,11 +4,36 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 // ever touches the network and so we can simulate hostile DNS answers.
 vi.mock("node:dns/promises", () => ({ lookup: vi.fn() }));
 
+// Capture every undici Agent constructed so the pinning tests can inspect the
+// exact `connect.lookup` override assertSafeUrl builds, without needing a
+// real socket (see "pinned dispatcher" describe block below).
+const capturedAgentOptions: unknown[] = [];
+vi.mock("undici", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("undici")>();
+  return {
+    ...actual,
+    Agent: vi.fn(function (this: unknown, opts: unknown) {
+      capturedAgentOptions.push(opts);
+      return { close: vi.fn(async () => undefined) };
+    }),
+  };
+});
+
 import { lookup } from "node:dns/promises";
 import { assertSafeUrl, validateRedirectHop } from "../ssrfGuard";
 import { ImportError } from "../errors";
 
 const lookupMock = lookup as unknown as Mock;
+
+interface CapturedConnectOptions {
+  connect: {
+    lookup: (
+      hostname: string,
+      options: unknown,
+      callback: (err: Error | null, addresses: Array<{ address: string; family: number }>) => void,
+    ) => void;
+  };
+}
 
 async function expectBlocked(url: string): Promise<void> {
   await expect(assertSafeUrl(url)).rejects.toMatchObject({
@@ -17,8 +42,17 @@ async function expectBlocked(url: string): Promise<void> {
   });
 }
 
+async function expectAllowed(url: string): Promise<URL> {
+  const result = await assertSafeUrl(url);
+  expect(result.url).toBeInstanceOf(URL);
+  expect(result.dispatcher).toBeDefined();
+  return result.url;
+}
+
 beforeEach(() => {
   lookupMock.mockReset();
+  capturedAgentOptions.length = 0;
+  delete process.env.AUDIT_TEST_ALLOW_LOOPBACK;
 });
 
 describe("assertSafeUrl — schemes and URL shape", () => {
@@ -64,10 +98,10 @@ describe("assertSafeUrl — IPv4 literals", () => {
   });
 
   it("allows public IPv4 literals, including private-range boundaries", async () => {
-    await expect(assertSafeUrl("http://93.184.216.34/article")).resolves.toBeInstanceOf(URL);
-    await expect(assertSafeUrl("http://172.15.255.255/")).resolves.toBeInstanceOf(URL);
-    await expect(assertSafeUrl("http://172.32.0.1/")).resolves.toBeInstanceOf(URL);
-    await expect(assertSafeUrl("http://11.0.0.1/")).resolves.toBeInstanceOf(URL);
+    await expectAllowed("http://93.184.216.34/article");
+    await expectAllowed("http://172.15.255.255/");
+    await expectAllowed("http://172.32.0.1/");
+    await expectAllowed("http://11.0.0.1/");
     expect(lookupMock).not.toHaveBeenCalled(); // literals never hit DNS
   });
 });
@@ -89,7 +123,7 @@ describe("assertSafeUrl — IPv6 literals", () => {
   });
 
   it("allows public IPv6 literals", async () => {
-    await expect(assertSafeUrl("http://[2606:4700:4700::1111]/")).resolves.toBeInstanceOf(URL);
+    await expectAllowed("http://[2606:4700:4700::1111]/");
   });
 });
 
@@ -129,8 +163,8 @@ describe("assertSafeUrl — DNS resolution (rebinding vector)", () => {
       { address: "93.184.216.34", family: 4 },
       { address: "2606:2800:220:1:248:1893:25c8:1946", family: 6 },
     ]);
-    const parsed = await assertSafeUrl("https://example.com/article");
-    expect(parsed.hostname).toBe("example.com");
+    const url = await expectAllowed("https://example.com/article");
+    expect(url.hostname).toBe("example.com");
   });
 
   it("maps resolution failure to fetch_failed with the paste fallback", async () => {
@@ -142,11 +176,73 @@ describe("assertSafeUrl — DNS resolution (rebinding vector)", () => {
   });
 });
 
+describe("assertSafeUrl — pinned dispatcher (DNS-rebinding TOCTOU)", () => {
+  it("pins the dispatcher's connector to the exact validated address — a resolved-hostname case", async () => {
+    lookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
+    await assertSafeUrl("https://pin-me.example.com/article");
+
+    expect(capturedAgentOptions).toHaveLength(1);
+    const opts = capturedAgentOptions[0] as CapturedConnectOptions;
+    const callback = vi.fn();
+
+    // The regression: even when asked to resolve a COMPLETELY DIFFERENT
+    // hostname (simulating whatever the connector would normally look up at
+    // connect-time, i.e. exactly the moment a rebinding attack flips the DNS
+    // record), the pinned lookup ignores it and hands back the address we
+    // already validated. Real DNS is never consulted a second time.
+    opts.connect.lookup("attacker-controlled-hostname.evil", {}, callback);
+
+    expect(callback).toHaveBeenCalledWith(null, [{ address: "93.184.216.34", family: 4 }]);
+    expect(lookupMock).toHaveBeenCalledTimes(1); // the ONE resolution assertSafeUrl itself did
+  });
+
+  it("pins IP-literal targets too (no DNS involved at all)", async () => {
+    await assertSafeUrl("http://93.184.216.34/article");
+
+    const opts = capturedAgentOptions[0] as CapturedConnectOptions;
+    const callback = vi.fn();
+    opts.connect.lookup("irrelevant", {}, callback);
+
+    expect(callback).toHaveBeenCalledWith(null, [{ address: "93.184.216.34", family: 4 }]);
+  });
+
+  it("re-pins independently on every redirect hop via validateRedirectHop", async () => {
+    lookupMock.mockResolvedValue([{ address: "203.0.113.9", family: 4 }]);
+    const result = await validateRedirectHop("https://second-hop.example.com/next");
+
+    const opts = capturedAgentOptions.at(-1) as CapturedConnectOptions;
+    const callback = vi.fn();
+    opts.connect.lookup("whatever", {}, callback);
+
+    expect(callback).toHaveBeenCalledWith(null, [{ address: "203.0.113.9", family: 4 }]);
+    expect(result.url.hostname).toBe("second-hop.example.com");
+  });
+});
+
+describe("assertSafeUrl — AUDIT_TEST_ALLOW_LOOPBACK (test-only escape hatch)", () => {
+  it("blocks loopback literals when the flag is unset (default/prod behavior)", async () => {
+    await expectBlocked("http://127.0.0.1:4000/");
+  });
+
+  it("allows loopback literals only when the flag is set", async () => {
+    process.env.AUDIT_TEST_ALLOW_LOOPBACK = "1";
+    await expectAllowed("http://127.0.0.1:4000/");
+  });
+
+  it("does not widen the bypass to non-loopback private ranges", async () => {
+    process.env.AUDIT_TEST_ALLOW_LOOPBACK = "1";
+    await expectBlocked("http://10.0.0.5/");
+    await expectBlocked("http://169.254.169.254/");
+  });
+});
+
 describe("validateRedirectHop", () => {
   it("applies the exact same policy to redirect targets", async () => {
     await expect(validateRedirectHop("http://169.254.169.254/latest")).rejects.toBeInstanceOf(
       ImportError,
     );
-    await expect(validateRedirectHop("http://93.184.216.34/next")).resolves.toBeInstanceOf(URL);
+    const result = await validateRedirectHop("http://93.184.216.34/next");
+    expect(result.url).toBeInstanceOf(URL);
+    expect(result.dispatcher).toBeDefined();
   });
 });
