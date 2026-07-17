@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Card } from "../components/ui/Card";
+import { AuditRunner } from "../components/audit/AuditRunner";
 
 export const metadata: Metadata = {
   title: "Audit results",
@@ -34,28 +34,17 @@ export default async function AuditPage({ searchParams }: PageProps) {
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-6 px-6 py-10 sm:py-14">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <Link href="/" className="w-fit font-mono text-xs uppercase tracking-wider text-text-3 hover:text-accent-ink">
-            ← New audit
-          </Link>
-          <h1 className="text-balance text-2xl font-semibold tracking-tight text-text-1 sm:text-3xl">
-            Auditing
-          </h1>
-          <p className="break-all font-mono text-sm text-text-2">{url}</p>
-        </div>
-
-        {/* Mount point for the streamed results UI. Swap this Card for
-            WS3's <AuditRunner url={url} /> once WS2's /api/audit and WS3's
-            component land — everything above this line stays as-is. */}
-        <Card label="Status">
-          <div className="flex flex-col gap-2 p-6 text-sm text-text-2">
-            <p>Audit engine wiring lands with WS2/WS3.</p>
-            <p className="text-text-3">This page will stream live signal, score, and rewrite results here.</p>
-          </div>
-        </Card>
+    <main className="flex flex-1 flex-col px-6 py-10 sm:py-14">
+      {/* Matches AuditRunner/AuditReportView's own mx-auto max-w-4xl so the
+          back link lines up with the report body it introduces. */}
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 pb-4">
+        <Link href="/" className="w-fit font-mono text-xs uppercase tracking-wider text-text-3 hover:text-accent-ink">
+          ← New audit
+        </Link>
+        <p className="break-all font-mono text-xs text-text-3">Auditing {url}</p>
       </div>
+
+      <AuditRunner url={url} />
     </main>
   );
 }

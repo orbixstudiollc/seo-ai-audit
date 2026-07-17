@@ -15,49 +15,7 @@ import {
   type SignalId,
   type SignalResult,
 } from "@aeo/scoring";
-import type { AuditFindings, AuditRewrites } from "./types";
-
-/**
- * DATA-CONTRACT v1 shapes WS2 hasn't landed yet on this branch (lib/audit/types.ts
- * still carries the pre-pivot BYOK shape: `done` with an auditId, no `meta`
- * event, the old no_key/invalid_key/... error kinds). These four types are the
- * exact v1 contract from docs/DATA-CONTRACT.md §2 — WS3 (this hook + the mock
- * report) builds against them now.
- *
- * contract-v1: moves to lib/audit/types.ts at merge (replaces the BYOK shapes).
- */
-export interface PageMeta {
-  url: string;
-  finalUrl: string;
-  title: string;
-  wordCount: number;
-  fetchedAt: string;
-}
-
-// contract-v1: moves to lib/audit/types.ts at merge (replaces the BYOK error kind set).
-export type AuditErrorKind =
-  | "invalid_url"
-  | "fetch_failed"
-  | "unsupported_content"
-  | "rate_limit"
-  | "server";
-
-// contract-v1: moves to lib/audit/types.ts at merge.
-export type AuditStreamEvent =
-  | { type: "meta"; page: PageMeta }
-  | { type: "signals"; signals: Record<DetSignalId, DetSignalResult> }
-  | { type: "scores"; scores: ScoreBreakdown; findings: AuditFindings }
-  | { type: "rewrites"; rewrites: AuditRewrites }
-  | { type: "done" }
-  | { type: "error"; kind: AuditErrorKind; message: string; retryAfter?: number };
-
-// contract-v1: moves to lib/audit/types.ts at merge — what the results page holds once the stream completes.
-export interface AuditReport {
-  page: PageMeta;
-  scores: ScoreBreakdown;
-  findings: AuditFindings;
-  rewrites: AuditRewrites | null;
-}
+import type { AuditFindings, AuditReport, AuditRewrites, PageMeta } from "./types";
 
 /**
  * A complete, internally-consistent `AuditReport` for `/dev/mock-report` and

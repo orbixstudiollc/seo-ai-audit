@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import type { DetSignalId, DetSignalResult, Lens, ScoreBreakdown } from "@aeo/scoring";
-import type { AuditFindings, AuditRewrites, AuditStreamPhase } from "@/lib/audit/types";
-import type { AuditErrorKind, PageMeta } from "@/lib/audit/mockReport";
+import type {
+  AuditErrorKind,
+  AuditFindings,
+  AuditRewrites,
+  AuditStreamPhase,
+  PageMeta,
+} from "@/lib/audit/types";
 import { isRubResult } from "@/lib/audit/signalMeta";
 import type { FindingItem } from "@/lib/audit/derive";
 import { LENSES, LENS_WEIGHTS } from "@aeo/scoring";

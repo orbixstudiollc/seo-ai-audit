@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useReducer, useState } from "react";
 import type { DetSignalId, DetSignalResult, ScoreBreakdown } from "@aeo/scoring";
-import type { AuditFindings, AuditRewrites, AuditStreamPhase } from "@/lib/audit/types";
-import type { AuditErrorKind, AuditStreamEvent, PageMeta } from "@/lib/audit/mockReport";
+import type {
+  AuditErrorKind,
+  AuditFindings,
+  AuditRewrites,
+  AuditStreamEvent,
+  AuditStreamPhase,
+  PageMeta,
+} from "@/lib/audit/types";
 import { parseAuditFrame } from "@/lib/audit/stream";
 
 /**
@@ -133,10 +139,7 @@ export function useAuditStream(url: string): UseAuditStreamResult {
           while (boundary >= 0) {
             const frame = buffer.slice(0, boundary);
             buffer = buffer.slice(boundary + 2);
-            // parseAuditFrame is typed against the pre-pivot AuditStreamEvent
-            // (lib/audit/types.ts); the wire payload already matches the v1
-            // contract shape, so this bridges the two pending WS2's type edit.
-            const event = parseAuditFrame(frame) as unknown as AuditStreamEvent | null;
+            const event = parseAuditFrame(frame);
             if (event) {
               dispatch(event);
               if (event.type === "done" || event.type === "error") ended = true;

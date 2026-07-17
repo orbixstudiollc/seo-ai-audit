@@ -1,4 +1,4 @@
-import type { PageMeta } from "@/lib/audit/mockReport";
+import type { PageMeta } from "@/lib/audit/types";
 
 type Props = {
   page: PageMeta;

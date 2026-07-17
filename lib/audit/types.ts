@@ -98,5 +98,16 @@ export type AuditStreamEvent =
   | { type: "done" }
   | { type: "error"; kind: AuditErrorKind; message: string; retryAfter?: number };
 
+// --- Client-side assembled report (DATA-CONTRACT §4) -------------------------
+
+/** Everything the results page holds once the stream completes. */
+export interface AuditReport {
+  page: PageMeta;
+  scores: ScoreBreakdown;
+  findings: AuditFindings;
+  /** null until the `rewrites` event lands. */
+  rewrites: AuditRewrites | null;
+}
+
 // Re-exported for consumers that only import from this module.
 export type { Lens, ScoreBreakdown, SignalId, DetSignalResult, RubSignalResult };
