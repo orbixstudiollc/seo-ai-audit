@@ -42,7 +42,7 @@ export function AuditUrlForm() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-2xl" noValidate>
-      <div className="flex flex-col gap-2 border border-line-strong bg-surface-1 p-1.5 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2 border border-line-strong bg-surface-1 p-1.5 focus-within:border-accent-ink focus-within:ring-2 focus-within:ring-accent-ink/30 sm:flex-row sm:items-center">
         <span className="hidden select-none pl-3 font-mono text-sm text-text-3 sm:inline">$</span>
         <label htmlFor={inputId} className="sr-only">
           URL to audit
