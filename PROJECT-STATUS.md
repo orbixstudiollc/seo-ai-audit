@@ -5,8 +5,7 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-17 · by: coordinator session (Fable) · main @ `ac1b7fe`
-(+ this protocol commit)
+Last updated: 2026-07-17 · by: provider-flex session · main @ `0a878af`
 
 ## Product
 
@@ -22,9 +21,15 @@ WS1 (scaffold), WS2 (audit API), WS3 (results UI) are **done, integrated on
 the 11 deterministic signals run as-is, while the 7 LLM-rubric signals need
 an AI key in Vercel env (pending user action). Coordinator review pass 1 is
 complete with gap notes committed into each `docs/phases/ws*-report.md`
-under `## Coordinator review`. Two workstreams are in flight in their own
-sessions: **provider-flex** and **ws4-crawl-bulk**. Auth/persistence stays
-deferred (Phase 5). The Supabase wipe SQL is written and awaiting the user.
+under `## Coordinator review`. **provider-flex is done, gates green, pushed,
+and deployed — awaiting coordinator review/merge to `main`** (live-verified:
+degradation behavior is unchanged for the still-missing key; the flexible
+`AI_PROVIDER` path is additive, not yet exercised end-to-end with a real
+non-Anthropic provider). It also applied two trivial fixes from
+`docs/reviews/ws1-gaps.md` (URL input focus state, baseline security
+headers) — both live-verified in production. **ws4-crawl-bulk** is still in
+flight in its own session. Auth/persistence stays deferred (Phase 5). The
+Supabase wipe SQL is written and awaiting the user.
 
 ## Plan → status
 
@@ -36,17 +41,18 @@ deferred (Phase 5). The Supabase wipe SQL is written and awaiting the user.
 | 3 | WS3 results UI: dashboard vs DATA-CONTRACT mock | `ws3-results-ui` `b7736dd` | ✅ merged + deployed |
 | 4 | Integration: merges, /audit wiring, dead-file cleanup, e2e, prod deploy | `integrate-v1` → `main` `ac1b7fe` | ✅ done |
 | 5 | Coordinator review pass 1 (all three WS + integration) | reviews in `docs/phases/ws*-report.md` | ✅ done |
-| 6 | Provider-flex: `AI_PROVIDER`/`AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` — Anthropic or any OpenAI-compatible endpoint (OpenRouter, zenmuz, Ollama) | `provider-flex` `3939732` | 🔄 in flight (own session) |
+| 6 | Provider-flex: `AI_PROVIDER`/`AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` — Anthropic or any OpenAI-compatible endpoint (OpenRouter, zenmuz, Ollama) + WS1-gaps quick fixes (focus state, security headers) | `provider-flex` `3939732` | ✅ done, pushed + deployed — awaiting merge |
 | 7 | WS4 crawl + bulk: bulk audit, site crawl, SSRF pinned-IP fix | `ws4-crawl-bulk` (not yet pushed) | 🔄 in flight (own session) |
 | 8 | Phase 4 report features: export, share, schema output, local history | — | ⏸ parked (`docs/phases/later-phases.md`) |
 | 9 | Phase 5 auth + persistence | restore from `backup/pre-rewrite` | ⏸ **deferred by product decision D-001** |
 
 ## Pending user actions
 
-1. **AI key in Vercel** — set `ANTHROPIC_API_KEY` (or, once provider-flex
-   merges, `AI_PROVIDER`+`AI_API_KEY`+`AI_MODEL`[+`AI_BASE_URL`]) in the
-   Vercel project env; until then production audits return the fetch/DET
-   phases and error on the rubric phase.
+1. **AI key in Vercel** — set `ANTHROPIC_API_KEY` (still the only path live
+   in production today), or once `provider-flex` merges, either that or
+   `AI_PROVIDER`+`AI_API_KEY`+`AI_MODEL`[+`AI_BASE_URL`] for a non-Anthropic
+   provider (OpenRouter/zenmuz/Ollama/etc.). Until a key is set, production
+   audits return the fetch/DET phases and error cleanly on the rubric phase.
 2. **Supabase wipe** — run `scripts/db-wipe.sql` in the Supabase SQL editor
    (D-009; all 7 pre-pivot tables verified empty; also staged on branch
    `claude/reset-schema-permissions-wb2yex`).

@@ -93,3 +93,56 @@ CONTEXT: prod https://seo-ai-audit-pied.vercel.app; canonical status
 `PROJECT-STATUS.md`; wipe SQL `scripts/db-wipe.sql` awaiting user; Phase 5
 auth stays deferred (D-001). Git push from this machine:
 `env -u GH_TOKEN git push …` (env token is scope-limited).
+
+## 2026-07-17 · Provider-flex · provider-flex@3939732
+
+DONE: Replaced the `ANTHROPIC_API_KEY`-only model factory
+(`lib/audit/provider.ts`) with an env-driven `resolveProvider()`:
+`AI_PROVIDER=openai-compatible` + `AI_API_KEY`/`AI_BASE_URL`/`AI_MODEL`
+covers OpenRouter/zenmuz.ai/Ollama/vLLM/LiteLLM via one code path
+(`.chat(modelId)` — classic chat/completions, not the newer responses API);
+`AI_PROVIDER=anthropic` covers Anthropic direct or an Anthropic-compatible
+proxy. No `AI_PROVIDER` set (or an unrecognized value) → byte-for-byte the
+old `ANTHROPIC_API_KEY`-only behavior — **no breaking change**, verified
+live against production. Salvaged both proxy-quirk workarounds from
+`backup/pre-rewrite:lib/audit/provider.ts` (the `.chat()` fix, the
+Anthropic-proxy `/v1` insertion fix) rather than rediscovering them.
+`mapLlmError` needed no changes — its never-log-keys discipline was already
+provider-agnostic. 16 new/rewritten tests in `provider.test.ts` (9
+`resolveProvider` precedence/fallback cases + a mocked HTTP round trip
+proving the openai-compatible path hits the right URL/key/model). Also
+applied two trivial fixes from `docs/reviews/ws1-gaps.md` (out of
+`ws1-scaffold-gap-review`): a visible focus state on the landing page's URL
+input (was `focus:outline-none` with no replacement), and baseline security
+headers in `next.config.ts` (CSP/HSTS/nosniff/frame-ancestors/
+referrer-policy/permissions-policy — `'unsafe-eval'` on `script-src` is
+dev-only, confirmed absent in the live prod CSP header). Deployed to
+production; live-verified degradation is unchanged (real fetch + DET
+signals stream, generic key-safe error on the LLM phase) and the new
+headers don't break hydration/CSP. `docs/DATA-CONTRACT.md` untouched —
+provider choice is a server-side implementation detail. Full report:
+`docs/phases/provider-flex-report.md`.
+
+NEXT: (1) coordinator review + merge `provider-flex` to `main`; (2) once
+merged, decide whether to actually configure a non-Anthropic provider in
+Vercel (OpenRouter/etc.) or stick with `ANTHROPIC_API_KEY` — the
+openai-compatible path is implemented and unit-tested but not yet exercised
+end-to-end against a real third-party endpoint in production (only the
+mocked round trip); (3) the still-open user actions from the integration
+handoff (AI key in Vercel, Supabase wipe, stale env var cleanup) are all
+still pending, unchanged by this session; (4) `docs/reviews/ws2-gaps.md`'s
+SSRF DNS-rebinding TOCTOU (#1) and hardcoded-`[]` `quotables` (#5) are still
+open — explicitly out of this session's scope (SSRF is `ws4-crawl-bulk`'s).
+
+CONTEXT: spec came directly from the user (no `docs/phases/*-spec.md` for
+this one — see `docs/phases/provider-flex-report.md` for the full brief);
+branch `provider-flex` off `main@ac1b7fe`, not yet merged; `.env.example`
+and `docs/ARCHITECTURE.md`'s "AI provider configuration" section document
+the four new env vars. Gotcha for whoever reviews the SHA history: this
+session also force-published a stray coordinator commit
+(`0a878af`, this protocol doc itself) that existed only in a sibling
+worktree's independent local clone (not shared object storage — worktrees
+under this Conductor project turned out to be a mix of true linked
+worktrees and fully independent clones; `git cat-file`/`git worktree list`
+disagreeing on whether a SHA resolves is the tell). Verify SHAs before
+assuming any worktree's objects are visible from another.
