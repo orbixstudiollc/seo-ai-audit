@@ -1,5 +1,5 @@
-import { parseAuditFrame } from "@/lib/audit/stream";
-import type { AuditStreamEvent } from "@/lib/audit/types";
+import { parseAuditFrame, parseSiteAuditFrame } from "@/lib/audit/stream";
+import type { AuditStreamEvent, SiteAuditStreamEvent } from "@/lib/audit/types";
 
 /**
  * Drain an SSE Response body to completion and return the parsed audit events,
@@ -35,5 +35,35 @@ export async function collectSse(response: Response): Promise<AuditStreamEvent[]
 
 /** The ordered list of event `type`s, for asserting the phase sequence. */
 export function eventTypes(events: AuditStreamEvent[]): string[] {
+  return events.map((e) => e.type);
+}
+
+/** Site-crawl sibling of collectSse, for POST /api/audit/bulk (SiteAuditStreamEvent). */
+export async function collectSiteSse(response: Response): Promise<SiteAuditStreamEvent[]> {
+  if (!response.body) throw new Error("Response has no body to stream.");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const events: SiteAuditStreamEvent[] = [];
+  let buffer = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const frame = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const event = parseSiteAuditFrame(frame);
+      if (event) events.push(event);
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+
+  return events;
+}
+
+export function siteEventTypes(events: SiteAuditStreamEvent[]): string[] {
   return events.map((e) => e.type);
 }
