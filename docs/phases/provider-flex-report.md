@@ -148,11 +148,54 @@ $ pnpm exec vitest run lib/audit/provider.test.ts
 
 ### Live production deploy + degradation check
 
-(filled in after deploy — see below)
+Deployed via `npx vercel deploy --prod` (project already linked from the
+prior integration session):
 
-## Deploy
+```
+Production      https://seo-ai-audit-jrthn4t8a-orbix2.vercel.app
+Aliased         https://seo-ai-audit-pied.vercel.app
+```
 
-## Live verification
+Same sandbox-local DNS/routing quirk on the alias domain documented in
+D-007/the prior integration report — bypassed the same way
+(`--resolve seo-ai-audit-pied.vercel.app:443:76.76.21.21`):
+
+```
+$ curl -sS --resolve ... -o /dev/null -w "HTTP %{http_code}\n" https://seo-ai-audit-pied.vercel.app/
+HTTP 200
+
+$ curl -sSI --resolve ... https://seo-ai-audit-pied.vercel.app/ | grep -i "content-security-policy\|strict-transport\|x-content-type\|x-frame\|referrer-policy\|permissions-policy"
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+permissions-policy: camera=(), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-frame-options: DENY
+```
+`'unsafe-eval'` correctly absent in the live production `script-src` — the
+`NODE_ENV` gate works in the real Vercel build, not just locally.
+
+**Real audit against the live production API** — no `AI_PROVIDER`/`AI_API_KEY`/
+`ANTHROPIC_API_KEY` are set in Vercel yet (same gap the integration report
+flagged; unchanged by this phase):
+
+```
+$ curl -sN --resolve ... -X POST https://seo-ai-audit-pied.vercel.app/api/audit \
+    -H "content-type: application/json" -d '{"url":"https://example.com/"}'
+
+data: {"type":"meta","page":{"title":"Example Domain","wordCount":16,...}}
+data: {"type":"signals","signals":{...all 11 DET signals...}}
+data: {"type":"error","kind":"server","message":"The audit failed due to an unexpected error. Try again in a moment."}
+```
+
+Identical degradation behavior to before this phase, now routed through
+`resolveProvider()` instead of the old direct `ANTHROPIC_API_KEY` check:
+`meta`/`signals` stream successfully (real fetch, real extraction, real DET
+signals), only the LLM-dependent phase fails, and the failure message is
+generic — no env var names, no "AI_PROVIDER"/"ANTHROPIC_API_KEY" text, no
+stack trace reach the client. The detailed
+"No AI provider is configured..." message stays server-side only (visible
+in Vercel's function logs, never in the SSE response).
 
 ## Open questions for the user
 
