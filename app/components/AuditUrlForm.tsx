@@ -4,6 +4,8 @@ import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/Button";
 
+type AuditMode = "single" | "site";
+
 const MAX_URL_LENGTH = 2048;
 
 function validateUrl(value: string): string | null {
@@ -22,10 +24,17 @@ function validateUrl(value: string): string | null {
   return null;
 }
 
+const MODES: { value: AuditMode; label: string; help: string }[] = [
+  { value: "single", label: "Single page", help: "Audit one URL." },
+  { value: "site", label: "Whole site", help: "Discover and audit up to 30 pages." },
+];
+
 export function AuditUrlForm() {
   const router = useRouter();
   const inputId = useId();
   const errorId = useId();
+  const modeGroupId = useId();
+  const [mode, setMode] = useState<AuditMode>("single");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -37,11 +46,33 @@ export function AuditUrlForm() {
       return;
     }
     setError(null);
-    router.push(`/audit?url=${encodeURIComponent(value.trim())}`);
+    const encoded = encodeURIComponent(value.trim());
+    router.push(mode === "site" ? `/audit/site?url=${encoded}` : `/audit?url=${encoded}`);
   }
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-2xl" noValidate>
+      <div role="radiogroup" aria-labelledby={modeGroupId} className="mb-3 inline-flex border border-line-strong bg-surface-1 p-1">
+        <span id={modeGroupId} className="sr-only">
+          Audit mode
+        </span>
+        {MODES.map((m) => (
+          <button
+            key={m.value}
+            type="button"
+            role="radio"
+            aria-checked={mode === m.value}
+            title={m.help}
+            onClick={() => setMode(m.value)}
+            className={`px-3 py-1.5 font-mono text-xs font-medium uppercase tracking-wider transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink ${
+              mode === m.value ? "bg-text-1 text-surface-1" : "text-text-2 hover:text-text-1"
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-2 border border-line-strong bg-surface-1 p-1.5 sm:flex-row sm:items-center">
         <span className="hidden select-none pl-3 font-mono text-sm text-text-3 sm:inline">$</span>
         <label htmlFor={inputId} className="sr-only">
@@ -56,7 +87,7 @@ export function AuditUrlForm() {
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder="https://example.com/your-article"
+          placeholder={mode === "site" ? "https://example.com" : "https://example.com/your-article"}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           aria-invalid={error ? true : undefined}
@@ -64,7 +95,7 @@ export function AuditUrlForm() {
           className="min-w-0 flex-1 bg-transparent px-2 py-2.5 font-mono text-sm text-text-1 placeholder:text-text-3 focus:outline-none"
         />
         <Button type="submit" variant="primary" className="w-full sm:w-auto">
-          Run audit
+          {mode === "site" ? "Audit site" : "Run audit"}
         </Button>
       </div>
       {error && (
