@@ -54,3 +54,38 @@ WS2 and WS3 are independent (WS3 builds on the mock). WS1 ships the shell
 first (deployable immediately), then wires WS3's `AuditRunner` into
 `/audit` once both sides exist. Expected merge order: WS1 shell → WS2 API →
 WS3 UI → WS1 final wiring commit.
+
+## Sessions (standing protocol)
+
+**Every workstream/phase gets its own fresh Conductor session.** No session
+carries two workstreams; a new phase means a new session started from the
+handoff prompt in `docs/HANDOFF.md`. The coordinator session persists across
+phases and only plans/reviews.
+
+## Closing ritual (every session, coordinator included)
+
+Before wrapping up, a session MUST:
+
+1. Update `PROJECT-STATUS.md` (repo root) so it reflects reality — status
+   table row(s), pending actions, "last updated" line.
+2. Append a handoff entry to `docs/HANDOFF.md` in its done/next/context
+   format — a ready-to-paste prompt for the next session.
+
+The coordinator's review loop checks both on every review pass and flags any
+session that wrapped without them (verdict `changes-requested` until fixed).
+
+## Model policy (per phase kickoff)
+
+At each kickoff the coordinator recommends a model for the executor session,
+matched to the difficulty of the work — in the spec or handoff prompt.
+
+| Work type | Model | Examples here |
+|---|---|---|
+| Planning, specs, contracts, reviews, oversight | Fable (coordinator only) | phase specs, DATA-CONTRACT changes, review passes |
+| Standard feature work | Sonnet | WS1 landing/scaffold, WS3 dashboard UI, Phase 4 export/share |
+| Genuinely hard problems (security-critical, streaming/concurrency edges, gnarly debugging) | Opus (or strongest available) | SSRF/pinned-IP hardening, crawl scheduler design in ws4 |
+| Mechanical/bulk work (renames, fixtures, doc formatting, codemods) | Haiku | fixture generation, mass import updates |
+
+Default to Sonnet; escalate only when the task is demonstrably hard (an
+executor hitting a wall is the signal), and drop to Haiku when the work is
+rote. The coordinator never implements features regardless of model.
