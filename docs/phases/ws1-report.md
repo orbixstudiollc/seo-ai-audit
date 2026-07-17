@@ -154,6 +154,169 @@ Response headers confirm no Vercel Deployment Protection / SSO gate (plain
 - **Deployment inspector**: https://vercel.com/orbix2/seo-ai-audit/7jnBMvwVsWtAAKSPRNXufCiP4HAv
 - Vercel project: `orbix2/seo-ai-audit` (`prj_mRVyPhFrSAqvjgN4xqnyHZYg8XTJ`), framework preset `Next.js`, confirmed via `vercel project inspect`.
 
+## Integration record (WS1 role, post WS2/WS3 merge)
+
+Branch `integrate-v1`, off `ws1-scaffold`. Commits:
+`202ded6` chore(integrate): remove dead pre-pivot export/workbench files,
+`801df56` feat(integrate): wire /audit to the real SSE pipeline,
+plus the merge commits and a real e2e spec.
+
+### 1. Merge
+
+`git merge origin/ws2-audit-api` then `git merge origin/ws3-results-ui` — both
+merged clean, **zero conflicts**. The two branches touched disjoint file sets
+except `app/components/workbench/ScoreRail.tsx`, which only WS3 modified
+(WS2 never touches `app/components/**`), so git resolved it as a pure add
+from WS3's side with nothing to reconcile.
+
+### 2. Dead pre-pivot files removed
+
+Per WS2's flagged boundary conflict (deleting `WorkbenchDocument` /
+`WorkbenchAudit` / `AuditPhaseStatus` from `lib/audit/types.ts` broke their
+last consumers): deleted `app/components/workbench/ExportMenu.tsx`,
+`lib/export/**` (the export-bundle builder those types alone drove:
+`index.ts`, `html.ts`, `markdown.ts`, `roadmap.ts`, `__tests__/export.test.ts`),
+and `test/components/exportMenu.test.ts`. Verified via grep first that
+nothing else imports any of them (WS3's `ScoreRail.tsx` was independently
+rewritten in place, dropping its own `no_key`/BYOK-era error-kind reference —
+no fallout there). `pnpm typecheck` went from 10 errors (all in these 5
+file-groups) to 0.
+
+### 3. Contract-type convergence
+
+WS3 built `useAuditStream`/`AuditReportView`/`ReportHeader` against local
+`PageMeta`/`AuditErrorKind`/`AuditStreamEvent` definitions in
+`lib/audit/mockReport.ts` (WS2's contract edit to `lib/audit/types.ts` hadn't
+landed on WS3's branch yet — explicitly flagged `// contract-v1: moves to
+lib/audit/types.ts at merge`). Since WS2's edit is now merged and the two
+shapes are field-for-field identical, added `AuditReport` to
+`lib/audit/types.ts` (the one type WS2 didn't need but WS3 did, per
+DATA-CONTRACT §4), deleted the four duplicate definitions from
+`mockReport.ts`, and repointed every consumer at `lib/audit/types.ts`
+directly. Also dropped the now-unneeded `as unknown as AuditStreamEvent`
+cast bridge in `useAuditStream`'s frame-reading loop — `parseAuditFrame`'s
+real return type now matches exactly.
+
+### 4. Wiring
+
+Swapped `/audit`'s stub `Card` for WS3's `<AuditRunner url={url} />`. Fixed
+a layout nesting issue while doing it: the page was wrapping `AuditRunner`
+in its own `max-w-3xl` container, but `AuditReportView` already owns a
+`mx-auto max-w-4xl` + its own padding — the outer wrapper was silently
+capping the report at a narrower width than it was designed for and
+double-padding it. The page shell now only wraps the back-link/URL strip at
+`max-w-4xl` (matching the report's own width) and mounts `AuditRunner` as a
+direct, unwrapped sibling.
+
+### 5. Gates + real local e2e
+
+`pnpm lint && pnpm typecheck && pnpm test && pnpm build` — all green
+(157/157 vitest, 0 lint/type errors). Added
+`test/e2e/live-audit.spec.ts`: drives the **full** wired journey (landing
+form → `/audit?url=` → real `POST /api/audit` → real SSRF-guarded fetch +
+Readability extraction of `https://example.com/` → mock LLM calls
+(`AUDIT_TEST_MOCK=1`) → live-streamed, rendered report) — only the two LLM
+calls are mocked; fetch, SSRF guard, DET signals, and SSE framing are all
+real. 13/13 `pnpm e2e` passing.
+
+Caught and fixed one real bug while writing it: my first assertion checked
+`page.getByRole("alert")).toHaveCount(0)` to confirm no error state, but
+Next.js's own route-announcer (an accessibility feature that announces
+page-title changes) also has `role="alert"` — it matched unconditionally on
+every successful run too. Fixed by asserting on the absence of the
+error-banner's "Run again" button instead, which only renders in
+`AuditReportView`'s actual error state.
+
+This run also caught a real, benign race worth recording: React Strict
+Mode's dev-only double effect invocation mounts `useAuditStream` twice per
+page load, and the first mount's `AbortController.abort()` (in the effect
+cleanup) correctly propagates all the way through the client fetch → the
+server's request signal → WS2's `sseResponse`'s `cancel()` → the wired
+`fetchArticle` abort — logged server-side as a clean `fetch_failed`, not a
+crash. The second mount's request completes normally. This is exactly
+WS2-D3's client-disconnect abort design working as intended, observed for
+free by running a real browser against it instead of only unit-testing the
+reducer.
+
+### 6. Deploy
+
+`npx vercel link --project seo-ai-audit --scope orbix2` (this workspace
+wasn't previously linked) → `npx vercel env ls production`:
+
+```
+name                       value               environments        created
+DATABASE_URL               Encrypted           Production          8h ago
+BETTER_AUTH_URL            Encrypted           Production          10h ago
+BETTER_AUTH_SECRET         Encrypted           Production          10h ago
+ENCRYPTION_KEY             Encrypted           Production          10h ago
+```
+
+**`ANTHROPIC_API_KEY` is not set.** Only the stale pre-pivot auth/DB vars
+(already flagged as leftover cruft in this report's original "Open
+questions", item 1) are present. Told the user directly rather than
+deploying silently. Confirmed empirically (see below) that the app degrades
+gracefully without it, per WS2's design — it does not fail to deploy or
+crash, it just can't run the rubric/rewrite LLM calls.
+
+`npx vercel deploy --prod` — build succeeded, deployed and aliased:
+
+```
+Production      https://seo-ai-audit-n1ax2nuen-orbix2.vercel.app
+Aliased         https://seo-ai-audit-pied.vercel.app
+```
+
+### 7. Live verification
+
+Same sandbox-local DNS/routing quirk on the alias domain WS1's original
+report documented (D-007) — bypassed the same way, `--resolve
+seo-ai-audit-pied.vercel.app:443:76.76.21.21`:
+
+```
+$ curl -sS --resolve ... -o /dev/null -w "HTTP %{http_code}\n" https://seo-ai-audit-pied.vercel.app/
+HTTP 200
+$ curl -sS --resolve ... -o /dev/null -w "HTTP %{http_code}\n" https://seo-ai-audit-pied.vercel.app/robots.txt
+HTTP 200
+$ curl -sS --resolve ... -o /dev/null -w "HTTP %{http_code}\n" https://seo-ai-audit-pied.vercel.app/llms.txt
+HTTP 200
+$ curl -sS --resolve ... https://seo-ai-audit-pied.vercel.app/ | grep -o '<h1[^<]*'
+<h1 ...>Paste a URL. Get an AI-search audit.
+$ curl -sS --resolve ... -o /dev/null -L -w "final HTTP %{http_code} final_url:%{url_effective}\n" "https://seo-ai-audit-pied.vercel.app/audit?url=not-a-url"
+final HTTP 200 final_url:https://seo-ai-audit-pied.vercel.app/
+$ curl -sS --resolve ... -o /dev/null -w "HTTP %{http_code}\n" https://seo-ai-audit-pied.vercel.app/dev/mock-report
+HTTP 404   # correctly gated out of production
+```
+
+**A real audit against the live production API** (`https://example.com/`,
+no BYOK, no key on this request — the server's own, currently-absent key):
+
+```
+$ curl -sN --resolve ... -X POST https://seo-ai-audit-pied.vercel.app/api/audit \
+    -H "content-type: application/json" -d '{"url":"https://example.com/"}'
+
+data: {"type":"meta","page":{"url":"https://example.com/","finalUrl":"https://example.com/","title":"Example Domain","wordCount":16,"fetchedAt":"2026-07-17T03:22:28.113Z"}}
+
+data: {"type":"signals","signals":{"S1":{"id":"S1","score":100,...}, ... "S11":{...}}}
+
+data: {"type":"error","kind":"server","message":"The audit failed due to an unexpected error. Try again in a moment."}
+```
+
+This is the missing-key graceful-degradation path, confirmed live, not just
+in theory: the real fetch, SSRF guard, Readability extraction, and all 11
+DET signals ran successfully in production and streamed correctly; only the
+LLM-dependent `scores`/`rewrites` phase failed, with a clean, generic,
+key-safe error message (no stack trace, no raw provider error, no key
+material — `mapLlmError`'s never-log discipline holding up under a real
+failure, not just its unit tests). Once `ANTHROPIC_API_KEY` is added to
+Vercel production, this same request will additionally stream `scores` and
+`rewrites`, exactly as the local `AUDIT_TEST_MOCK=1` transcript above does.
+
+**Gap for the user**: add `ANTHROPIC_API_KEY` to the Vercel project's
+production environment (`orbix2/seo-ai-audit`) to enable real audits. This
+is a secret — I can't add it myself. Separately (lower priority,
+pre-existing item 1 above): the leftover `DATABASE_URL`/`BETTER_AUTH_*`/
+`ENCRYPTION_KEY` vars are unused by any code on this branch (grep-verified
+clean in WS2's report) and could be removed as cleanup whenever convenient.
+
 ## Coordinator review
 
 (appended by coordinator: verdict merge / changes-requested + notes)
