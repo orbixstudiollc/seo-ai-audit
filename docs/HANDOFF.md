@@ -348,3 +348,18 @@ NEXT: No release work remains for this change.
 CONTEXT: The default history limit remains 25; users can select 500 in
 Settings. Compact summaries stay in localStorage and reopenable reports stay
 in IndexedDB, both browser/device specific.
+
+## 2026-07-19 · Correct 500-record retention cap · main
+
+DONE: Fixed the history writer's stale internal hard cap of 50 so the Settings
+choice of 500 now genuinely retains up to 500 audit records. Added a regression
+test with 550 inputs and a requested limit above the supported maximum to prove
+the result clamps at exactly 500. Lint/typecheck/build PASS, 241/241 tests, and
+5/5 focused dashboard browser journeys. Commit `ec4e4a0`; production deployment
+`dpl_8UFWU1nMFoGdH2Qg2kFmkibWJc3Y` is READY on the canonical alias.
+
+NEXT: No release work remains for browser history retention.
+
+CONTEXT: This changes dashboard history retention only. The separate whole-site
+audit crawler remains capped at 50 pages per run for provider-cost, timeout, and
+anonymous abuse-control safety.
