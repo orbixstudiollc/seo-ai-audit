@@ -124,3 +124,26 @@ test("audits a whole site: discovers a 3-page sitemap, streams per-page results,
   await expect(page.getByText(/Saved locally/)).toBeVisible();
   await expect(page.getByText("Site rollup")).toBeVisible();
 });
+
+test("retries one failed bulk page without rerunning the whole site", async ({ page }) => {
+  const failedUrl = `${server.baseUrl}/page-a`;
+  const events = [
+    { type: "site:discovery-start", rootUrl: `${server.baseUrl}/` },
+    { type: "site:discovery-done", rootUrl: `${server.baseUrl}/`, method: "sitemap", pages: [{ url: failedUrl, source: "sitemap" }], truncated: false },
+    { type: "site:page-start", url: failedUrl, index: 0, total: 1 },
+    { type: "site:page-event", url: failedUrl, index: 0, event: { type: "error", kind: "server", message: "Fixture provider failure." } },
+    { type: "site:page-done", url: failedUrl, index: 0, status: "error" },
+    { type: "site:rollup", rollup: { pagesAudited: 0, pagesFailed: 1, avgScores: null, worstPages: [], commonFindings: [] }, stoppedEarly: null },
+    { type: "site:done" },
+  ];
+  await page.route("/api/audit/bulk", async (route) => {
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") });
+  });
+  await page.goto(`/audit/site?url=${encodeURIComponent(`${server.baseUrl}/`)}`);
+  const retryPage = page.getByRole("link", { name: "Retry page", exact: true });
+  await expect(retryPage).toBeVisible();
+  await retryPage.click();
+  await expect(page).toHaveURL(/\/audit\?url=/);
+  await expect(page.getByRole("heading", { name: "Fixture Page A" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Answer-first intro", { exact: true })).toBeVisible();
+});

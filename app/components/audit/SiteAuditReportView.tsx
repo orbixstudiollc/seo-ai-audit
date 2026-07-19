@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type {
   DiscoveredPageInfo,
@@ -67,6 +69,7 @@ function overallScore(page: PageRunState | undefined): number | null {
 export function SiteAuditReportView(props: Props) {
   const { phase, rootUrl, method, discoveredPages, truncated, pages, pageOrder, rollup, stoppedEarly, error, onRetry } = props;
   const [openPageUrl, setOpenPageUrl] = useState<string | null>(null);
+  const router = useRouter();
 
   if (openPageUrl) {
     const page = pages[openPageUrl];
@@ -87,10 +90,8 @@ export function SiteAuditReportView(props: Props) {
           findings={page?.findings ?? null}
           rewrites={page?.rewrites ?? null}
           error={page?.error ?? null}
-          // ponytail: bulk has no per-page re-run endpoint, so "Run again" on a
-          // drilled-in page re-runs the whole site — acceptable here since the
-          // "← Back to site overview" link keeps that context visible.
-          onRetry={onRetry}
+          onRetry={() => router.push(`/audit?url=${encodeURIComponent(openPageUrl)}`)}
+          retryLabel="Retry page"
         />
       </div>
     );
@@ -139,12 +140,12 @@ export function SiteAuditReportView(props: Props) {
               const score = overallScore(page);
               const canOpen = page?.phase === "done" || page?.phase === "error";
               return (
-                <li key={url}>
+                <li key={url} className="flex items-center">
                   <button
                     type="button"
                     disabled={!canOpen}
                     onClick={() => canOpen && setOpenPageUrl(url)}
-                    className="flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
+                    className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
                   >
                     <span className="min-w-0 flex-1 truncate font-mono text-xs text-text-2">{url}</span>
                     <span className="flex shrink-0 items-center gap-3">
@@ -167,6 +168,14 @@ export function SiteAuditReportView(props: Props) {
                       </span>
                     </span>
                   </button>
+                  {page?.phase === "error" && (
+                    <Link
+                      href={`/audit?url=${encodeURIComponent(url)}`}
+                      className="mr-3.5 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wide text-accent-ink hover:underline"
+                    >
+                      Retry page
+                    </Link>
+                  )}
                 </li>
               );
             })}

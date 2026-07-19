@@ -120,7 +120,9 @@ state is byte-identical to what a direct `/api/audit` run would produce.
 `SiteAuditReportView.tsx`: discovery status → page list (status + running
 score as it streams in) → site rollup (avg lens tiles reusing `ScoreTile`,
 worst pages, common findings) → click any finished page to drill into its
-full report via the **unmodified** WS3 `AuditReportView`.
+full report via the WS3 `AuditReportView`. Failed rows and drilled-in error
+views route “Retry page” through the single-page `/api/audit` flow, avoiding
+the cost of rerunning the whole site.
 
 ## Decisions taken
 
@@ -159,11 +161,10 @@ full report via the **unmodified** WS3 `AuditReportView`.
   tests (`test/api/audit.test.ts`) pass unmodified against the refactored
   route — same behavior, same event sequence, verified byte-for-byte via the
   existing assertions.
-- **WS4-D5**: Per-page "Run again" inside a drilled-in site-crawl page
-  re-runs the *whole* site (there's no per-page re-run endpoint on the bulk
-  API). Accepted as a small, visible UX tradeoff — the "← Back to site
-  overview" link keeps that context in view — rather than building a
-  dedicated single-page-within-a-crawl re-run surface for v1.
+- **WS4-D5 (superseded 2026-07-19)**: Per-page retries originally reran the
+  whole site. Failed rows and drilled-in errors now link to the existing
+  single-page audit route for that URL, so recovery spends only one page's
+  audit cost and saves the result as an ordinary individual audit.
 
 ## Deviations from spec
 

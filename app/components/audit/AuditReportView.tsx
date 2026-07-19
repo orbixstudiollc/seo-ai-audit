@@ -32,6 +32,7 @@ type Props = {
   rewrites: AuditRewrites | null;
   error: StreamError | null;
   onRetry: () => void;
+  retryLabel?: string;
 };
 
 const ERROR_LABEL: Record<AuditErrorKind, string> = {
@@ -69,7 +70,7 @@ export function eeatFrom(breakdown: ScoreBreakdown | null) {
  * rendered by the live `AuditRunner` (hook-backed) or directly against
  * `mockReport` on `/dev/mock-report`, bypassing the hook.
  */
-export function AuditReportView({ phase, page, signals, scores, findings, rewrites, error, onRetry }: Props) {
+export function AuditReportView({ phase, page, signals, scores, findings, rewrites, error, onRetry, retryLabel = "Run again" }: Props) {
   const [openLens, setOpenLens] = useState<Lens | null>(null);
 
   const isTerminalError = phase === "error";
@@ -93,7 +94,7 @@ export function AuditReportView({ phase, page, signals, scores, findings, rewrit
             <span className="font-medium">{ERROR_LABEL[error.kind]}</span> {error.message}
           </p>
           <Button size="sm" variant="outline" onClick={onRetry}>
-            Run again
+            {retryLabel}
           </Button>
         </div>
       )}
