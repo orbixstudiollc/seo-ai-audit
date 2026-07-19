@@ -331,3 +331,20 @@ a code release if a different cost/quality tradeoff is later preferred.
 
 CONTEXT: Tier names remain `cheap` and `strong` because they also describe call
 roles and mock fixtures, but both real default tiers now resolve to Haiku 4.5.
+
+## 2026-07-19 · 500-record history pagination · main
+
+DONE: Expanded the browser-local history setting from 10/25/50 to
+10/25/50/100/250/500 audits. The dashboard now paginates filtered and sorted
+results 10 cards at a time, shows the visible range and total, resets to page 1
+when filters change, and safely clamps the current page after removals. Added a
+browser journey covering the 12-record/two-page boundary. Gates:
+lint/typecheck/build PASS, 240/240 tests, 20/20 Playwright journeys. Commit
+`62689a9`; production deployment `dpl_4pNS6CLXZDKpp4iAwJLprdHqZz9p` is READY
+and attached to the canonical alias.
+
+NEXT: No release work remains for this change.
+
+CONTEXT: The default history limit remains 25; users can select 500 in
+Settings. Compact summaries stay in localStorage and reopenable reports stay
+in IndexedDB, both browser/device specific.
