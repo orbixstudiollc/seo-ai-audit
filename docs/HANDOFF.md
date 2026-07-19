@@ -383,3 +383,21 @@ CONTEXT: Discovery coverage and AI completion are separate. Production logs
 from the earlier Orbix run showed rubric/rewrite provider errors; raising the
 page cap includes all URLs but does not remove upstream provider limits or the
 serverless wall-clock ceiling.
+
+## 2026-07-19 · Individual retries for failed bulk pages · main
+
+DONE: Added a “Retry page” action to every failed whole-site audit row and to
+the drilled-in page error view. Recovery now routes only that URL through the
+existing single-page `/audit` → `/api/audit` flow; it no longer restarts the
+costly whole-site crawl. Site-level discovery errors retain the full “Run
+again” action. Added an end-to-end journey proving the failed row navigates to
+the individual audit and completes without another bulk request. Gates:
+lint/typecheck/build PASS, 241/241 tests, 21/21 Playwright journeys. Commit
+`a3361a7`; production deployment `dpl_ALmzJBLjr8xdBndVuF74xtgkz5pW` is READY
+on the canonical alias.
+
+NEXT: No release work remains for individual failed-page recovery.
+
+CONTEXT: The successful individual retry is saved as a normal single-page
+dashboard audit. The original saved site report remains an immutable snapshot;
+rerunning one page does not rewrite that historical site rollup.
