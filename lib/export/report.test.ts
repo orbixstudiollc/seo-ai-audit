@@ -15,6 +15,8 @@ describe("audit report exports", () => {
   it("builds standalone HTML, scores JSON, and FAQ JSON-LD", () => {
     const bundle = buildAuditExportBundle(mockReport);
     expect(bundle.html).toMatch(/^<!doctype html>/);
+    expect(bundle.html).toContain("<h1>AI-search audit:");
+    expect(bundle.html).toContain("<table>");
     expect(JSON.parse(bundle.scoresJson)).toEqual(mockReport.scores);
     expect(bundle.jsonLd).toContain('"@type": "FAQPage"');
   });
