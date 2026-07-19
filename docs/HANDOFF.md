@@ -146,3 +146,24 @@ under this Conductor project turned out to be a mix of true linked
 worktrees and fully independent clones; `git cat-file`/`git worktree list`
 disagreeing on whether a SHA resolves is the tell). Verify SHAs before
 assuming any worktree's objects are visible from another.
+
+## 2026-07-19 · Release integration · release/provider-ws4@51ae0b8
+
+DONE: Started from `origin/main@2cef058`, merged `provider-flex@3939732` and
+`ws4-bulk-audit-crawl@2cc82fe`, and resolved their only content conflict by
+retaining both the whole-site mode selector and the accessible URL-input focus
+treatment. Added explicit quality-tool exclusions for Conductor's nested
+`.claude`/`.conductor` worktrees. Verified lint, typecheck, 222/222
+unit/integration tests, production build, and 14/14 Playwright journeys. The
+release branch was pushed as a recoverable checkpoint.
+
+NEXT: Promote the release line to `main`, allow the Git-linked Vercel project
+to deploy, verify `/`, `/audit/site`, `/robots.txt`, `/llms.txt`, security
+headers, and the bulk endpoint's expected validation response. Then configure
+a real provider key in Vercel and verify a full LLM-scored production audit.
+
+CONTEXT: Production is https://seo-ai-audit-pied.vercel.app. Provider config
+is documented in `.env.example` and `docs/ARCHITECTURE.md`; whole-site design
+and evidence are in `docs/phases/ws4-report.md`. The only blocking product
+configuration is the real provider key. Supabase wipe and stale Vercel env
+cleanup remain user actions; auth/persistence stays deferred by D-001.

@@ -132,7 +132,6 @@ before — see docs/DECISIONS.md D-007).
 ## Known deferred items
 
 - Auth + persistence (Phase 5) — restore from `backup/pre-rewrite`.
-- Site-wide crawling (v1 audits exactly one URL's content).
 - Headless-browser rendering for JS-heavy pages (flag "may be incomplete"
   instead, as the content extractor does today).
 - Per-user BYOK keys (multi-provider *server*-key config exists — see "AI
