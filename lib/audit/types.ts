@@ -111,3 +111,77 @@ export interface AuditReport {
 
 // Re-exported for consumers that only import from this module.
 export type { Lens, ScoreBreakdown, SignalId, DetSignalResult, RubSignalResult };
+
+// -----------------------------------------------------------------------------
+// Bulk site-crawl (WS4, additive v1.1 — POST /api/audit/bulk only).
+// Nothing above this line is touched: single-URL clients hitting /api/audit
+// are unaffected by anything below. See docs/DATA-CONTRACT.md §7.
+// -----------------------------------------------------------------------------
+
+export type DiscoveryMethod = "sitemap" | "crawl";
+
+export interface DiscoveredPageInfo {
+  url: string;
+  source: DiscoveryMethod;
+}
+
+export interface WorstPage {
+  url: string;
+  title: string;
+  overallScore: number;
+}
+
+export interface CommonFinding {
+  issue: string;
+  count: number;
+}
+
+/** Site-level aggregate — computed once from every page's completed outcome so far. */
+export interface SiteRollup {
+  pagesAudited: number;
+  pagesFailed: number;
+  /** Mean of each lens's score across every successfully-scored page; null if none succeeded. */
+  avgScores: Record<Lens, number> | null;
+  worstPages: WorstPage[];
+  commonFindings: CommonFinding[];
+}
+
+/** Present on `site:rollup` only when the queue stopped before every discovered page ran. */
+export interface StoppedEarlyInfo {
+  reason: "budget" | "page_cap" | "timeout";
+  pagesRemaining: number;
+}
+
+/** Bulk-endpoint error kinds — distinct from AuditErrorKind because these describe
+ * whole-crawl failures (abuse controls, discovery), not one page's fetch/LLM failure. */
+export type SiteErrorKind =
+  | "invalid_url"
+  | "no_pages_found"
+  | "rate_limit"
+  | "concurrent_site_limit"
+  | "server";
+
+/**
+ * SSE event union for POST /api/audit/bulk. `site:page-event` wraps the
+ * exact same per-page `AuditStreamEvent` a single /api/audit call would
+ * stream — the bulk pipeline reuses lib/audit/pageAudit.ts verbatim per
+ * page, it does not reimplement it, so nothing here duplicates that shape.
+ */
+export type SiteAuditStreamEvent =
+  | { type: "site:discovery-start"; rootUrl: string }
+  | {
+      type: "site:discovery-done";
+      rootUrl: string;
+      method: DiscoveryMethod;
+      pages: DiscoveredPageInfo[];
+      truncated: boolean;
+    }
+  | { type: "site:page-start"; url: string; index: number; total: number }
+  | { type: "site:page-event"; url: string; index: number; event: AuditStreamEvent }
+  | { type: "site:page-done"; url: string; index: number; status: "ok" | "error" }
+  | { type: "site:rollup"; rollup: SiteRollup; stoppedEarly: StoppedEarlyInfo | null }
+  | { type: "site:done" }
+  | { type: "site:error"; kind: SiteErrorKind; message: string; retryAfter?: number };
+
+/** Client-side lifecycle of one streamed site-crawl run — the site-mode sibling of AuditStreamPhase. */
+export type SiteAuditStreamPhase = "idle" | "connecting" | "discovering" | "auditing" | "done" | "error";

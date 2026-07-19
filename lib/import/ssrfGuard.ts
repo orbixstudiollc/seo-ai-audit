@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { Agent, type Dispatcher } from "undici";
 import { ImportError } from "./errors";
 
 /**
@@ -11,10 +12,17 @@ import { ImportError } from "./errors";
  * (http://2130706433/ -> 127.0.0.1) before we check, so literal obfuscation
  * is covered too.
  *
- * ponytail: validate-per-hop (this + validateRedirectHop after every
- * redirect) closes the redirect-rebinding vector; a fully pinned resolved-IP
- * dispatcher is the upgrade path if TOCTOU DNS rebinding within a single hop
- * ever matters for this threat model.
+ * DNS-rebinding TOCTOU fix (docs/phases/ws2-report.md gap, closed in WS4):
+ * `assertSafeUrl` resolves the hostname ONCE, validates every returned
+ * address, then returns a `dispatcher` pinned to the exact validated address
+ * via undici's `connect.lookup` override. Callers MUST fetch through that
+ * dispatcher (never a bare `fetch(url)`) — that's what guarantees the socket
+ * that actually opens is the same one whose IP was checked, so a hostile DNS
+ * answer flipping the record between our lookup and the real connect can
+ * never matter. `validateRedirectHop` applies the identical policy (fresh
+ * resolve + fresh pin) to every redirect target. Crawling (WS4) multiplies
+ * how many hostnames get fetched, so this closes the gap the single-URL
+ * review flagged as its top finding before that surface grew.
  */
 
 const BLOCKED_MESSAGE =
@@ -89,13 +97,60 @@ function isBlockedIp(address: string, family: number): boolean {
   return family === 4 ? isBlockedIpv4Int(ipv4ToInt(address)) : isBlockedIpv6(address);
 }
 
+function isLoopbackIp(address: string, family: number): boolean {
+  return family === 4 ? address.startsWith("127.") : address === "::1";
+}
+
 /**
- * Validate a URL for safe outbound fetching. Returns the parsed URL on
- * success; throws ImportError("blocked" | "fetch_failed") otherwise. For
- * hostnames, every DNS-resolved address is checked — a name resolving to
- * even one private address is rejected (DNS-rebinding via hostile records).
+ * Test-only escape hatch, same pattern as AUDIT_TEST_MOCK for the LLM calls:
+ * lets Playwright/vitest point discovery + bulk-audit at a local fixture HTTP
+ * server without weakening the guard for real traffic. Never set in prod, and
+ * scoped to loopback ONLY (not the full private-range set) so it stays as
+ * narrow as the thing it exists to unblock.
  */
-export async function assertSafeUrl(url: string): Promise<URL> {
+function loopbackBypassEnabled(): boolean {
+  return process.env.AUDIT_TEST_ALLOW_LOOPBACK === "1";
+}
+
+/**
+ * Builds a dispatcher whose connector NEVER consults DNS — it hands back the
+ * exact `address`/`family` we already validated, regardless of what hostname
+ * undici asks it to resolve. This is what makes the pin airtight: even if an
+ * attacker's DNS server changes the record the instant after our check, the
+ * connection this dispatcher opens still goes to the address we checked.
+ */
+function pinnedDispatcher(address: string, family: 4 | 6): Dispatcher {
+  return new Agent({
+    connect: {
+      lookup: (_hostname, _options, callback) => {
+        callback(null, [{ address, family }]);
+      },
+    },
+  });
+}
+
+export interface SafeUrl {
+  url: URL;
+  /** Pinned to the validated address. Callers MUST fetch through this (never
+   * a bare `fetch(url)`), and MUST close() it once done with that hop. */
+  dispatcher: Dispatcher;
+}
+
+/**
+ * Node's global `fetch` accepts a `dispatcher` option (an undici extension),
+ * but the DOM-lib `RequestInit` type this project's tsconfig pulls in has no
+ * idea it exists. This is the one narrow cast point every caller shares.
+ */
+export type NodeFetchInit = RequestInit & { dispatcher?: Dispatcher };
+
+/**
+ * Validate a URL for safe outbound fetching. Returns the parsed URL plus a
+ * dispatcher pinned to the validated address; throws
+ * ImportError("blocked" | "fetch_failed") otherwise. For hostnames, every
+ * DNS-resolved address is checked — a name resolving to even one private
+ * address is rejected (DNS-rebinding via hostile records).
+ */
+export async function assertSafeUrl(url: string): Promise<SafeUrl> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -128,8 +183,9 @@ export async function assertSafeUrl(url: string): Promise<URL> {
 
   const family = isIP(hostname);
   if (family !== 0) {
-    if (isBlockedIp(hostname, family)) throw new ImportError("blocked", BLOCKED_MESSAGE);
-    return parsed;
+    const bypass = loopbackBypassEnabled() && isLoopbackIp(hostname, family);
+    if (!bypass && isBlockedIp(hostname, family)) throw new ImportError("blocked", BLOCKED_MESSAGE);
+    return { url: parsed, dispatcher: pinnedDispatcher(hostname, family as 4 | 6) };
   }
 
   if (hostname === "localhost" || hostname.endsWith(".localhost")) {
@@ -157,13 +213,20 @@ export async function assertSafeUrl(url: string): Promise<URL> {
     }
   }
 
-  return parsed;
+  // Pin to the first validated address — every candidate was already checked
+  // safe above, so any deterministic pick is fine; what matters is that the
+  // actual connect never re-resolves.
+  const chosen = addresses[0];
+  return {
+    url: parsed,
+    dispatcher: pinnedDispatcher(chosen.address, chosen.family as 4 | 6),
+  };
 }
 
 /**
  * Re-validation applied to EVERY redirect target before it is followed —
  * a public URL 302-ing to http://169.254.169.254/ dies here.
  */
-export function validateRedirectHop(url: string): Promise<URL> {
+export function validateRedirectHop(url: string): Promise<SafeUrl> {
   return assertSafeUrl(url);
 }

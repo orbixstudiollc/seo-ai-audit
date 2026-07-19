@@ -3,9 +3,15 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * E2E config for the anonymous audit journey (test/e2e/*.spec.ts).
  *
- * The dev server is booted with one escape hatch the app understands:
+ * The dev server is booted with two escape hatches the app understands:
  *   - AUDIT_TEST_MOCK=1 -> the audit route uses a deterministic mock model,
  *                          so audits never call a real provider or spend a key.
+ *   - AUDIT_TEST_ALLOW_LOOPBACK=1 -> the SSRF guard allows loopback IP
+ *                          literals, so site-audit.spec.ts can point
+ *                          discovery/crawl at a local fixture HTTP server
+ *                          instead of the real internet (see docs/DATA-CONTRACT.md §7
+ *                          and lib/import/ssrfGuard.ts — narrowly scoped to
+ *                          loopback only, never set in prod).
  * Everything else is the real app: real routing, real SSE, real rendering.
  * No database and no auth — the tool is anonymous and stateless.
  */
@@ -34,6 +40,7 @@ export default defineConfig({
     stderr: "pipe",
     env: {
       AUDIT_TEST_MOCK: "1",
+      AUDIT_TEST_ALLOW_LOOPBACK: "1",
     },
   },
 });

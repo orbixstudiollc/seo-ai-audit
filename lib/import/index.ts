@@ -4,8 +4,11 @@ import { fetchArticle } from "./fetchArticle";
 export { ImportError, PASTE_FALLBACK_MESSAGE } from "./errors";
 export type { ImportErrorKind } from "./errors";
 export { assertSafeUrl, validateRedirectHop } from "./ssrfGuard";
+export type { SafeUrl } from "./ssrfGuard";
 export { fetchArticle } from "./fetchArticle";
 export type { FetchedArticle } from "./fetchArticle";
+export { safeFetchText } from "./safeFetch";
+export type { SafeFetchResult } from "./safeFetch";
 export { extractArticle } from "./extract";
 export type { ExtractedArticle } from "./extract";
 

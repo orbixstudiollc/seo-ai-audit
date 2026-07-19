@@ -42,9 +42,11 @@ describe("fetchArticle — happy path", () => {
     expect(result.html).toContain("<body>hi</body>");
     expect(result.finalUrl).toBe(PAGE);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as [URL, RequestInit & { dispatcher?: unknown }];
     expect(init.redirect).toBe("manual");
     expect((init.headers as Record<string, string>)["user-agent"]).toContain("Mozilla/5.0");
+    // Every fetch must go through the SSRF-pinned dispatcher (never a bare fetch(url)).
+    expect(init.dispatcher).toBeDefined();
   });
 
   it("follows up to 3 validated redirect hops and reports the final URL", async () => {

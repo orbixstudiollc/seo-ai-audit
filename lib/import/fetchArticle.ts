@@ -1,5 +1,5 @@
 import { ImportError, PASTE_FALLBACK_MESSAGE } from "./errors";
-import { assertSafeUrl, validateRedirectHop } from "./ssrfGuard";
+import { assertSafeUrl, validateRedirectHop, type NodeFetchInit } from "./ssrfGuard";
 
 /**
  * Best-effort article fetcher. Redirects are followed MANUALLY (max 3 hops)
@@ -36,7 +36,7 @@ export async function fetchArticle(
     signal?: AbortSignal;
   },
 ): Promise<FetchedArticle> {
-  let target = await assertSafeUrl(url);
+  let { url: target, dispatcher } = await assertSafeUrl(url);
 
   const controller = new AbortController();
   const onExternalAbort = (): void => controller.abort(opts?.signal?.reason);
@@ -57,18 +57,21 @@ export async function fetchArticle(
 
   try {
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      const res = await fetch(target, {
+      const fetchInit: NodeFetchInit = {
         redirect: "manual",
         signal: controller.signal,
+        dispatcher,
         headers: {
           "user-agent": USER_AGENT,
           accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
           "accept-language": "en",
         },
-      });
+      };
+      const res = await fetch(target, fetchInit);
 
       if (REDIRECT_STATUSES.has(res.status)) {
         await res.body?.cancel().catch(() => undefined);
+        await dispatcher.close().catch(() => undefined); // done with this hop's pinned connection
         const location = res.headers.get("location");
         if (location === null) {
           throw new ImportError("fetch_failed", PASTE_FALLBACK_MESSAGE);
@@ -85,7 +88,7 @@ export async function fetchArticle(
         } catch {
           throw new ImportError("fetch_failed", PASTE_FALLBACK_MESSAGE);
         }
-        target = await validateRedirectHop(next);
+        ({ url: target, dispatcher } = await validateRedirectHop(next));
         continue;
       }
 
@@ -126,6 +129,9 @@ export async function fetchArticle(
   } finally {
     clearTimeout(timer);
     if (opts?.signal) opts.signal.removeEventListener("abort", onExternalAbort);
+    // Closes the last hop's pinned dispatcher; earlier hops already closed
+    // themselves right after their redirect was followed. Idempotent-safe.
+    void dispatcher.close().catch(() => undefined);
   }
 }
 
