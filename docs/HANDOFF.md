@@ -420,3 +420,21 @@ for all five new tables return HTTP 401 / PostgreSQL `42501`, confirming the
 schema exists and publishable-key access is denied. The legacy `public.audits`
 endpoint is present but empty and was not touched. Vercel reportedly has the
 URL, publishable key, and rotated secret configured.
+
+## 2026-07-20 · Supabase Phase 1 production activation · main@0a8e227+
+
+DONE: Confirmed the URL, publishable key, and rotated secret are configured in
+Vercel Production; deployed Phase 1 as
+`dpl_9fZGF7ZoAiv24cgANxeoXy2uh2n6` and attached the canonical production alias.
+The live `/api/history` route passed a zero-cost end-to-end audit write/read,
+saved-report write/read, delete, and cleanup smoke test. The synthetic record
+was removed, so validation left no test audit data behind.
+
+NEXT: Run a normal production audit when useful to create the first user-owned
+cloud report and confirm the browser's “Open report” presentation with real
+content. Optional maintenance: remove stale pre-pivot Vercel variables.
+
+CONTEXT: Production is https://seo-ai-audit-pied.vercel.app. Supabase public
+table access remains denied by RLS; persistence is available only through the
+server routes and ownership-token hash. Keep the rotated Supabase secret in
+Vercel only and never expose it to client code or source control.

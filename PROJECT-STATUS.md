@@ -17,8 +17,8 @@ https://seo-ai-audit-pied.vercel.app
 
 ## Current status (one paragraph)
 
-The anonymous v1 product is live in production, and Supabase Phase 1 is
-implemented with its database migration applied, pending deployment. It supports
+The anonymous v1 product and Supabase Phase 1 are live in production with the
+database migration applied and cloud storage validated end to end. It supports
 anonymous single-page and whole-site audits of up to 500 discovered pages,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
@@ -30,8 +30,8 @@ Phase 4 adds dashboard/history/settings, local report exports, stateless share
 links, FAQ JSON-LD, result social metadata, and a validated plain-JSON fallback
 for providers that reject structured output. A real production audit completed
 through both provider calls and saved its compact history record.
-Every submitted query is cached locally and, after the Phase 1 migration is
-applied, synchronized to private Supabase tables through server-only routes.
+Every submitted query is cached locally and synchronized to private Supabase
+tables through server-only routes.
 Completed reports can be reopened from cloud or IndexedDB; the dashboard
 supports 500 records and paginates 10 cards at a time. Failed bulk pages can be
 retried individually. Current gates: lint/typecheck/build, 251 tests, and 21
@@ -52,13 +52,14 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 7 | WS4 crawl + bulk: bulk audit, site crawl, SSRF pinned-IP fix | `ws4-bulk-audit-crawl` `2cc82fe` | ✅ merged + deployed |
 | 8 | Phase 4a: dashboard, browser-local history, global settings | `main` via PR #1 | ✅ merged + deployed |
 | 9 | Phase 4b: export, share, schema output, result OG | `main` via PR #1 | ✅ merged + deployed |
-| 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` `11b879e`+ | 🟡 schema applied; deploy pending |
+| 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` `11b879e`+ | ✅ migrated + deployed + validated |
 | 11 | Account auth + cross-device identity | future phase | ⏸ deferred |
 
 ## Pending user actions
 
-1. **Deploy Phase 1** and validate a real cloud write plus report reopen.
-2. **Credential hygiene** — keep the rotated Supabase secret only in Vercel.
+1. **Credential hygiene** — keep the rotated Supabase secret only in Vercel.
+2. Optional: run a normal production audit to populate the first user-owned
+   cloud report; the synthetic storage validation row was removed.
 3. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
    `ENCRYPTION_KEY` vars from Vercel (WS1 report, open question 1).
 

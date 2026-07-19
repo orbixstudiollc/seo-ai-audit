@@ -33,8 +33,14 @@ Date: 2026-07-20
 - Public probes for all five tables return HTTP 401 / PostgreSQL `42501`,
   confirming the tables exist and publishable-key access is denied.
 - Existing `public.audits` returned an empty array and was not modified.
+- Production deployment `dpl_9fZGF7ZoAiv24cgANxeoXy2uh2n6` is READY and
+  aliased to `https://seo-ai-audit-pied.vercel.app`.
+- The live `/api/history` route passed audit write/read, saved-report
+  write/read, deletion, and post-delete cleanup checks using a synthetic,
+  zero-cost record. The temporary record was removed.
 
-## Activation requirement
+## Activation status
 
-Deploy the Phase 1 application, then run a real audit and confirm rows in
-`audit_runs` and `audit_reports` plus dashboard report reopening.
+The schema and all three production environment variables are active. Phase 1
+is deployed and its complete server-to-Supabase persistence path is validated.
+A normal user audit can now populate the first durable user-owned report.
