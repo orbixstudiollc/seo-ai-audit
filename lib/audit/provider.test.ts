@@ -40,7 +40,7 @@ function clearProviderEnv(): void {
 describe("serverModelId", () => {
   it("resolves a fixed model id per tier", () => {
     expect(serverModelId("cheap")).toBe("claude-haiku-4-5-20251001");
-    expect(serverModelId("strong")).toBe("claude-sonnet-5");
+    expect(serverModelId("strong")).toBe("claude-haiku-4-5-20251001");
   });
 });
 
@@ -153,7 +153,7 @@ describe("buildServerModel — anthropic path", () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-test-key";
 
     const model = buildServerModel("strong");
-    expect(modelIdOf(model)).toBe("claude-sonnet-5");
+    expect(modelIdOf(model)).toBe("claude-haiku-4-5-20251001");
   });
 
   it("uses AI_MODEL for both tiers when AI_PROVIDER=anthropic overrides it", () => {

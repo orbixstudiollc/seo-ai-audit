@@ -18,7 +18,7 @@ export type Tier = "cheap" | "strong";
 
 const DEFAULT_ANTHROPIC_MODEL_IDS: Record<Tier, string> = {
   cheap: "claude-haiku-4-5-20251001",
-  strong: "claude-sonnet-5",
+  strong: "claude-haiku-4-5-20251001",
 };
 
 /** The default (no AI_MODEL override) model id a tier resolves to on the Anthropic path. */

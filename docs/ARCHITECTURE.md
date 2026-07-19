@@ -94,8 +94,8 @@ The two LLM calls per audit (RUB rubric scoring, then rewrite generation) run
 through `lib/audit/provider.ts`'s `resolveProvider()`, env-first:
 
 1. **`ANTHROPIC_API_KEY` alone** (no other `AI_*` var) — the default,
-   backward-compatible path. Real Anthropic API, built-in per-tier models
-   (Haiku for scoring, Sonnet for rewrites). Existing deployments configured
+   backward-compatible path. Real Anthropic API, with Claude Haiku 4.5 used
+   for both scoring and rewrites to minimize cost. Existing deployments configured
    this way are unaffected by anything below.
 2. **`AI_PROVIDER=openai-compatible`** + `AI_API_KEY` + `AI_BASE_URL` +
    `AI_MODEL` — one code path (the AI SDK's OpenAI client, hitting the
