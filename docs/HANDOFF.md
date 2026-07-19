@@ -212,3 +212,24 @@ CONTEXT: History key `seo-ai-audit:history:v1`, settings key
 cap at the user’s 10/25/50 preference and contain URLs, titles, status, lens
 scores, timestamps, and optional site page count only. D-001 still forbids
 server persistence/auth.
+
+## 2026-07-19 · App completion / Phase 4b · phase4-dashboard-history-settings
+
+DONE: Completed the remaining anonymous-v1 report features: local Markdown,
+standalone HTML, scores JSON, site-summary Markdown/JSON exports; copyable FAQ
+JSON-LD; stateless single/site share links; URL-specific social metadata and a
+generated Open Graph image. Added a schema-validated plain-JSON retry for
+providers that reject native structured output, narrowly classified so auth,
+rate-limit, and server failures never retry. Gates: lint/typecheck/build PASS,
+236/236 tests, 17/17 Playwright journeys. Report:
+`docs/phases/report-export-provider-fallback-report.md`.
+
+NEXT: Review PR #1, deploy it, and run a real provider-backed production audit
+to prove the configured proxy returns schema-valid plain JSON through both LLM
+calls. Rotate the previously shared provider credential. Phase 5 auth/database
+work remains explicitly deferred by D-001.
+
+CONTEXT: Exports are browser-generated and persist nothing. Share links rerun
+the audited URL per D-006. The provider fallback validates against the original
+Zod schemas and only retries structured-output capability failures. Production
+verification is the only remaining anonymous-v1 release gate.

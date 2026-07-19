@@ -3,11 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuditRunner } from "../components/audit/AuditRunner";
 
-export const metadata: Metadata = {
-  title: "Audit results",
-  robots: { index: false },
-};
-
 function parseUrl(raw: string | undefined): string | null {
   if (!raw) return null;
   if (raw.length > 2048) return null;
@@ -23,6 +18,24 @@ function parseUrl(raw: string | undefined): string | null {
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const rawUrl = typeof params.url === "string" ? params.url : undefined;
+  const url = parseUrl(rawUrl);
+  const host = url ? new URL(url).hostname : null;
+  const title = host ? `Audit ${host}` : "Audit results";
+  const description = host
+    ? `Run a fresh AEO, GEO, Citability, and AI Overview audit for ${host}.`
+    : "Run a fresh AI-search visibility audit.";
+  return {
+    title,
+    description,
+    robots: { index: false },
+    openGraph: { title, description, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function AuditPage({ searchParams }: PageProps) {
   const params = await searchParams;

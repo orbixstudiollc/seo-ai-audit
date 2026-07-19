@@ -1,4 +1,4 @@
-import { generateObject, type LanguageModel } from "ai";
+import type { LanguageModel } from "ai";
 import { computeParsedDocument } from "./parse";
 import { DET_SIGNALS } from "./signals/det";
 import { RUBRIC_VERSION, buildRubricPrompt } from "./rubricPrompt";
@@ -14,6 +14,7 @@ import type {
   SignalId,
   SignalResult,
 } from "./types";
+import { generateValidatedObject } from "./generateValidatedObject";
 
 /**
  * Bumped whenever DET signal logic or lens weighting changes in a way that
@@ -55,7 +56,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
 
   const detSignals = DET_SIGNAL_IDS.map((id) => [id, DET_SIGNALS[id](doc)] as const);
 
-  const { object: rubric, response } = await generateObject({
+  const { object: rubric, response } = await generateValidatedObject({
     model: input.model,
     schema: rubricSchema,
     prompt: buildRubricPrompt(doc, { rubricVersion: RUBRIC_VERSION }),

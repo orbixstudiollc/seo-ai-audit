@@ -1,6 +1,6 @@
 # SEO AI Audit
 
-**v1 rebuild in progress — clean slate.** An open, anonymous, low-friction
+**Anonymous v1 feature build complete.** An open, anonymous, low-friction
 audit tool: paste a URL, get AI-search audit results back. No account, no
 signup, no stored data.
 
@@ -30,7 +30,7 @@ Rebuild happens in phased execution sessions; specs live in `specs/`.
    (`specs/phase-1.md`).
 2. **Phase 2** — anonymous URL → fetch → audit engine → streamed results.
 3. **Phase 3** — visual results dashboard.
-4. **Phase 4** — export, share links, schema output, local history.
+4. **Phase 4** — dashboard, local history/settings, export, share links, schema output, and social metadata.
 5. **Phase 5 (deferred)** — auth + persistence.
 
 ## Dev

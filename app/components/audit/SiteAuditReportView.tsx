@@ -16,6 +16,7 @@ import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { ScoreTile } from "@/app/components/ui/ScoreTile";
 import { AuditReportView } from "./AuditReportView";
+import { SiteReportActions } from "./SiteReportActions";
 
 type StreamError = { kind: SiteErrorKind; message: string; retryAfter?: number };
 
@@ -250,6 +251,8 @@ export function SiteAuditReportView(props: Props) {
           </div>
         </Card>
       )}
+
+      {rollup && rootUrl && <SiteReportActions rootUrl={rootUrl} rollup={rollup} />}
     </div>
   );
 }

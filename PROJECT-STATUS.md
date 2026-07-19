@@ -5,7 +5,7 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-19 · by: dashboard/history/settings session · branch `phase4-dashboard-history-settings`
+Last updated: 2026-07-19 · by: app completion session · branch `phase4-dashboard-history-settings`
 
 ## Product
 
@@ -17,7 +17,8 @@ https://seo-ai-audit-pied.vercel.app
 ## Current status (one paragraph)
 
 WS1–WS3, provider-flex, and WS4 are **done, integrated on `main`, and live in
-production**. The product supports anonymous single-page and whole-site audits,
+production**. Phase 4 is complete on `phase4-dashboard-history-settings` and
+awaiting review/deployment. The product supports anonymous single-page and whole-site audits,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
 typecheck, 222 unit/integration tests, production build, and 14 Playwright
@@ -26,9 +27,10 @@ the whole-site selector and route are live, the bulk endpoint validates bad
 input correctly, and the security headers, robots.txt, and llms.txt are present.
 A real provider key is still required in Vercel for the seven LLM-rubric
 signals; without it the deterministic phase completes and the app degrades
-cleanly. The dashboard/history/settings phase is implemented on
-`phase4-dashboard-history-settings`, with 230 tests and 16 Playwright journeys
-green, and is ready for coordinator review. Auth/server persistence stays
+cleanly. The branch includes dashboard/history/settings, local report exports,
+stateless share links, FAQ JSON-LD, result social metadata, and a validated
+plain-JSON fallback for providers that reject structured output. Gates are
+green at 236 tests and 17 Playwright journeys. Auth/server persistence stays
 deferred (Phase 5), and the Supabase wipe SQL is still awaiting the user.
 
 ## Plan → status
@@ -43,17 +45,15 @@ deferred (Phase 5), and the Supabase wipe SQL is still awaiting the user.
 | 5 | Coordinator review pass 1 (all three WS + integration) | reviews in `docs/phases/ws*-report.md` | ✅ done |
 | 6 | Provider-flex: `AI_PROVIDER`/`AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` — Anthropic or any OpenAI-compatible endpoint (OpenRouter, zenmuz, Ollama) + WS1-gaps quick fixes (focus state, security headers) | `provider-flex` `3939732` | ✅ merged + deployed |
 | 7 | WS4 crawl + bulk: bulk audit, site crawl, SSRF pinned-IP fix | `ws4-bulk-audit-crawl` `2cc82fe` | ✅ merged + deployed |
-| 8 | Phase 4a: dashboard, browser-local history, global settings | `phase4-dashboard-history-settings` | ✅ implemented, ready for review |
-| 9 | Phase 4b: export, share, schema output | — | ⏸ parked (`docs/phases/later-phases.md`) |
+| 8 | Phase 4a: dashboard, browser-local history, global settings | `phase4-dashboard-history-settings` | ✅ implemented, PR #1 |
+| 9 | Phase 4b: export, share, schema output, result OG | `phase4-dashboard-history-settings` | ✅ implemented, PR #1 |
 | 10 | Phase 5 auth + persistence | restore from `backup/pre-rewrite` | ⏸ **deferred by product decision D-001** |
 
 ## Pending user actions
 
-1. **AI provider compatibility** — the configured Anthropic-compatible proxy
-   answers ordinary messages but does not honor the AI SDK structured-output
-   request, so production currently errors at the rubric phase. Use a provider
-   with structured output/tool support or implement a validated plain-JSON
-   fallback. Rotate the credential shared during setup.
+1. **Production release verification** — review/merge PR #1, deploy it, then
+   run a real audit against the configured proxy to verify the validated
+   plain-JSON fallback end to end. Rotate the credential shared during setup.
 2. **Supabase wipe** — run `scripts/db-wipe.sql` in the Supabase SQL editor
    (D-009; all 7 pre-pivot tables verified empty; also staged on branch
    `claude/reset-schema-permissions-wb2yex`).
