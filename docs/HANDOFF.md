@@ -315,3 +315,19 @@ CONTEXT: Current history key `seo-ai-audit:history:v4`; report database
 `seo-ai-audit:reports` version 1. Both stores are browser/device specific and
 never synced to the server. If IndexedDB is unavailable, the compact history
 record still works and offers Run again.
+
+## 2026-07-19 · Cost-minimized Claude model · main
+
+DONE: Replaced the default rewrite-tier `claude-sonnet-5` model with
+`claude-haiku-4-5-20251001`, so direct Anthropic deployments now use Haiku 4.5
+for both audit LLM calls. Updated the production `AI_MODEL` override to
+`claude-haiku-4.5`, which applies the same cost-minimized choice to the current
+OpenAI-compatible provider. Lint/typecheck/build and all 240 tests pass. Commit
+`44e563a`; production deployment `dpl_6oNoLQwEGecFCLsFNiKqLW5CmsX3` is READY
+and attached to the canonical alias.
+
+NEXT: Monitor output quality on real audits; `AI_MODEL` can be changed without
+a code release if a different cost/quality tradeoff is later preferred.
+
+CONTEXT: Tier names remain `cheap` and `strong` because they also describe call
+roles and mock fixtures, but both real default tiers now resolve to Haiku 4.5.

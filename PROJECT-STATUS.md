@@ -20,7 +20,7 @@ The anonymous v1 product is **feature-complete, integrated on `main`, and live
 in production**. It supports anonymous single-page and whole-site audits,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
-typecheck, 222 unit/integration tests, production build, and 14 Playwright
+typecheck, 240 unit/integration tests, production build, and 19 Playwright
 journeys. Production was directly deployed and smoke-tested on 2026-07-19:
 the whole-site selector and route are live, the bulk endpoint validates bad
 input correctly, and the security headers, robots.txt, and llms.txt are present.
@@ -34,6 +34,7 @@ can be reopened later as a read-only report from browser-local IndexedDB, while
 the dashboard keeps compact versioned summaries in localStorage. Gates are green at 240 tests and 19 Playwright
 journeys. Auth/server persistence stays
 deferred (Phase 5), and the Supabase wipe SQL is still awaiting the user.
+Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM cost.
 
 ## Plan → status
 
