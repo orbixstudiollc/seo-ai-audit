@@ -1,5 +1,5 @@
 import { generateObject, generateText, type LanguageModel } from "ai";
-import type { z } from "zod";
+import { toJSONSchema, type z } from "zod";
 
 type ProviderError = { statusCode?: unknown; name?: unknown; message?: unknown };
 
@@ -46,7 +46,7 @@ export async function generateValidatedObject<T>(input: GenerateValidatedObjectI
     if (!isStructuredOutputCapabilityError(error)) throw error;
     const fallback = await generateText({
       model: input.model,
-      prompt: `${input.prompt}\n\nThe provider cannot enforce a response schema. Return exactly one valid JSON object and no markdown fence or commentary.`,
+      prompt: `${input.prompt}\n\nThe provider cannot enforce a response schema. Return exactly one valid JSON object and no markdown fence or commentary. The JSON must satisfy this schema:\n${JSON.stringify(toJSONSchema(input.schema))}`,
       temperature: input.temperature,
       abortSignal: input.abortSignal,
     });

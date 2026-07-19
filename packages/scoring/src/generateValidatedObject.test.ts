@@ -18,11 +18,13 @@ describe("generateValidatedObject", () => {
 
   it("falls back to plain JSON and validates it", async () => {
     let calls = 0;
+    let fallbackPrompt = "";
     const model = new MockLanguageModelV4({
       modelId: "fallback-model",
-      doGenerate: async () => {
+      doGenerate: async (options) => {
         calls += 1;
         if (calls === 1) throw Object.assign(new Error("tool_use unsupported"), { statusCode: 400 });
+        fallbackPrompt = JSON.stringify(options.prompt);
         return {
           content: [{ type: "text", text: "```json\n{\"score\": 72}\n```" }],
           finishReason: { unified: "stop", raw: "stop" },
@@ -39,6 +41,8 @@ describe("generateValidatedObject", () => {
     });
     expect(result.object).toEqual({ score: 72 });
     expect(calls).toBe(2);
+    expect(fallbackPrompt).toContain("required");
+    expect(fallbackPrompt).toContain("score");
   });
 
   it("does not retry authentication failures", async () => {
