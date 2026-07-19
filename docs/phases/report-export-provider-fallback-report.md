@@ -5,7 +5,8 @@
 - [x] implemented on `phase4-dashboard-history-settings`
 - [x] anonymous / no database constraint preserved
 - [x] quality gates green
-- [x] ready for review and production provider verification
+- [x] merged through PR #1 and deployed to production
+- [x] real provider-backed audit completed through rubric and rewrite calls
 
 ## What shipped
 
@@ -32,6 +33,13 @@ pnpm e2e        PASS — 17 Chromium journeys
 
 Unit coverage includes export completeness, standalone HTML, JSON-LD script escaping, capability-error classification, schema-validated fallback parsing, and no retry on authentication errors. Browser coverage downloads Markdown and HTML and verifies the copied stateless share URL.
 
-## Production follow-up
+## Production verification
 
-Deploy after review, then run one real audit against the configured Anthropic-compatible proxy. That live probe is required to prove the proxy's plain-JSON response conforms to the rubric and rewrite schemas. Rotate the previously shared provider credential during deployment maintenance.
+Deployment `dpl_9PsFRbmgcv3hvTCHei28ZnmVnZKD` reached Ready and was aliased to
+`https://seo-ai-audit-pied.vercel.app`. Live browser probes verified the
+dashboard, persistent header/settings surface, 1200×630 Open Graph image, and
+a real 5,215-word Wikipedia audit. The configured proxy produced schema-valid
+rubric scores (AEO 45, GEO 65, Citability 70, AI Overview 55), findings, and a
+terminal `complete` record in browser-local history, proving both LLM calls and
+the fallback path work end to end. The previously shared credential should
+still be rotated as routine release hygiene.

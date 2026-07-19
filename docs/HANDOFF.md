@@ -233,3 +233,24 @@ CONTEXT: Exports are browser-generated and persist nothing. Share links rerun
 the audited URL per D-006. The provider fallback validates against the original
 Zod schemas and only retries structured-output capability failures. Production
 verification is the only remaining anonymous-v1 release gate.
+
+## 2026-07-19 · Anonymous v1 production release · main@0a966c1
+
+DONE: Merged PR #1 into `main` at `0a966c1`, directly deployed production as
+`dpl_9PsFRbmgcv3hvTCHei28ZnmVnZKD`, and confirmed the canonical alias. Live UI
+verification proved `/dashboard`, global settings/navigation, and the 1200×630
+Open Graph image. A real 5,215-word Wikipedia audit completed through the
+configured proxy with AEO 45 / GEO 65 / Citability 70 / AI Overview 55,
+rendered grounded findings and export/share controls, and saved a terminal
+`complete` browser-local history record. This proves the validated plain-JSON
+fallback works through both rubric and rewrite provider calls.
+
+NEXT: Rotate the provider credential previously shared during setup. Optional
+maintenance remains: run `scripts/db-wipe.sql` and remove stale pre-pivot
+Vercel environment variables. Phase 5 auth/database work remains deferred by
+D-001 and is not part of anonymous v1 completion.
+
+CONTEXT: Production is https://seo-ai-audit-pied.vercel.app. Local release
+gates remain lint/typecheck/build, 236 tests, and 17 Playwright journeys. The
+deployed source is the content merged by PR #1; deployment inspector:
+https://vercel.com/orbix2/seo-ai-audit/9PsFRbmgcv3hvTCHei28ZnmVnZKD.
