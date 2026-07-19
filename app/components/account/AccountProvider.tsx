@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Session } from "@supabase/supabase-js";
 import { accountAuthConfigured, getBrowserSupabase } from "@/lib/auth/client";
 import { ACCOUNT_OWNER_CHANGED_EVENT } from "@/lib/auth/events";
+import { magicLinkErrorMessage } from "@/lib/auth/messages";
 import { CLOUD_OWNER_HEADER, getCloudOwnerToken } from "@/lib/cloud/owner";
 
 type AccountContextValue = {
@@ -68,7 +69,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       options: { emailRedirectTo: `${window.location.origin}/dashboard` },
     });
     return error
-      ? { ok: false, message: "The sign-in email could not be sent. Try again shortly." }
+      ? { ok: false, message: magicLinkErrorMessage(error.code) }
       : { ok: true, message: "Check your email for the secure sign-in link." };
   }, []);
 

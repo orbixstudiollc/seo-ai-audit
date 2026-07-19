@@ -38,7 +38,7 @@ tables through server-only routes.
 Completed reports can be reopened from cloud or IndexedDB; the dashboard
 supports 500 records and paginates 10 cards at a time. Failed bulk pages can be
 retried individually. The ownership migration passed a rollback-only production
-database test. Current gates: lint/typecheck/build, 267 tests, and 22
+database test. Current gates: lint/typecheck/build, 270 tests, and 22
 Playwright journeys.
 Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM cost.
 
@@ -58,14 +58,14 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 9 | Phase 4b: export, share, schema output, result OG | `main` via PR #1 | ✅ merged + deployed |
 | 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` `11b879e`+ | ✅ migrated + deployed + validated |
 | 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` `e9a1269` | ✅ implemented + deployed; credentials needed for live provider task |
-| 12 | Phase 5: optional account auth + cross-device identity | `main` `7b51ac2` | ✅ implemented + migrated + deployed; live email proof pending |
+| 12 | Phase 5: optional account auth + cross-device identity | `main` `7b51ac2` | ✅ implemented + migrated + deployed + live data path validated |
 
 ## Pending user actions
 
 1. Add server-only `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` in Vercel for
    the required low-limit live provider validation.
-2. Supply an email address for the end-to-end magic-link and cross-device
-   account recovery proof.
+2. Configure custom SMTP in Supabase Auth for production email capacity; the
+   built-in sender is limited to two emails per hour.
 3. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
    `ENCRYPTION_KEY` vars from Vercel (WS1 report, open question 1).
 

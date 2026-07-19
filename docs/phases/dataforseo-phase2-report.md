@@ -21,7 +21,7 @@ Date: 2026-07-20
 
 - Migration `202607200002_dataforseo_task_idempotency.sql` applied in the
   production Supabase project.
-- Lint, TypeScript, production build, 267 unit/integration tests, and 22
+- Lint, TypeScript, production build, 270 unit/integration tests, and 22
   Playwright journeys pass in the combined release tree.
 - Production route returns the sanitized `provider_unavailable` response when
   credentials are absent, proving that no paid task can start accidentally.

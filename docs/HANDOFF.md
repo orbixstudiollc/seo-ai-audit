@@ -446,7 +446,7 @@ DONE: DataForSEO technical crawl implementation is deployed with a hard
 and saved-report pagination. Optional Supabase email-link account recovery is
 implemented. The account migration and its rollback-only five-table ownership
 test passed in production; Auth Site URL and dashboard redirect allowlist are
-configured. Combined gates pass: lint, typecheck, production build, 267 tests,
+configured. Combined gates pass: lint, typecheck, production build, 270 tests,
 and 22 Playwright journeys. Reports:
 `docs/phases/dataforseo-phase2-report.md` and
 `docs/phases/account-phase5-report.md`.
@@ -463,3 +463,20 @@ address for the magic link.
 CONTEXT: Do not send an unsolicited authentication email or invent provider
 credentials. The database and UI work can ship independently; keep the overall
 “complete all phases” goal active until both live proofs are performed.
+
+## 2026-07-20 · Phase 5 live ownership validation · main
+
+DONE: Used a reversible production Supabase test identity to save an anonymous
+audit under device A, claim it into the verified account, recover it using a
+different device B token, and delete it. Removed the test user and confirmed
+zero `phase5-live-*` rows in `audit_runs`. This proves the production account
+ownership and cross-device data path without touching user data.
+
+NEXT: Configure custom SMTP for production email capacity. Supabase currently
+shows the built-in two-emails-per-hour limit as disabled/read-only. Add the
+still-missing DataForSEO API credentials (sandbox or live), then run the final
+provider task.
+
+CONTEXT: The free DataForSEO sandbox still requires the account API login and
+API password. Set `DATAFORSEO_BASE_URL=https://sandbox.dataforseo.com` for a
+zero-cost dummy-data validation before switching to the live hostname.

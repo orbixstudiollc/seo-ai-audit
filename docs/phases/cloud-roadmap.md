@@ -35,7 +35,7 @@ Evidence: `docs/phases/supabase-phase1-report.md`.
 DataForSEO credentials are server-only. The API password is generated in the
 DataForSEO API Access screen and is not the account password.
 
-## Phase 5 — account identity and cross-device recovery (implemented; live email proof pending)
+## Phase 5 — account identity and cross-device recovery (implemented and data path validated)
 
 - Supabase Auth with an email-link flow; anonymous auditing remains available.
 - Link the current anonymous workspace to the signed-in user without losing
