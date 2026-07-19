@@ -285,9 +285,12 @@ without loss and display a clear rerun prompt when no snapshot exists. Snapshot
 arrays are capped at five and strings at 500 characters; full reports, fetched
 content, raw provider responses, headers, and credentials remain unstored.
 Gates: lint/typecheck/build PASS, 239/239 tests, 19/19 Playwright journeys,
-including expanded-card overflow verification at 320px.
+including expanded-card overflow verification at 320px. Deployed as
+`dpl_DDFCFqHo3rg2hhAGA258uxR9mydz`; Vercel reports Ready and the canonical
+production alias is attached.
 
-NEXT: Deploy and live-verify a new completed audit’s details disclosure.
+NEXT: No release work remains. The next newly completed audit will populate a
+v3 snapshot; older migrated cards intentionally show the rerun prompt.
 
 CONTEXT: Current key `seo-ai-audit:history:v3`; v2 and v1 are migration-only.
 The redesign uses the existing Swiss/editorial tokens and native `<details>` /
