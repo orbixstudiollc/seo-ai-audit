@@ -11,6 +11,8 @@ type Props = {
   url: string;
 };
 
+const compactText = (value: string) => value.slice(0, 500);
+
 /** Live container: streams `url` through /api/audit/bulk and renders the progressive site report. */
 export function SiteAuditRunner({ url }: Props) {
   const stream = useSiteAuditStream(url);
@@ -29,9 +31,16 @@ export function SiteAuditRunner({ url }: Props) {
         ? (stream.stoppedEarly ? "partial" : "complete")
         : stream.phase === "error" ? (stream.rollup ? "partial" : "failed") : "started";
       const record: AuditHistoryRecord = {
-        id: historyRun.id, version: 2, url, title: new URL(url).hostname,
+        id: historyRun.id, version: 3, url, title: new URL(url).hostname,
         mode: "site" as const, createdAt: historyRun.createdAt, status,
         scores: stream.rollup?.avgScores ?? null, pageCount: stream.rollup?.pagesAudited,
+        details: {
+          kind: "site",
+          pagesFailed: stream.rollup?.pagesFailed ?? 0,
+          worstPages: (stream.rollup?.worstPages ?? []).slice(0, 5).map((page) => ({ ...page, title: compactText(page.title) })),
+          commonFindings: (stream.rollup?.commonFindings ?? []).slice(0, 5).map((finding) => ({ ...finding, issue: compactText(finding.issue) })),
+          errorMessage: stream.error ? compactText(stream.error.message) : undefined,
+        },
       };
       const serialized = JSON.stringify(record);
       if (serialized === lastRecordRef.current) return;
@@ -39,7 +48,7 @@ export function SiteAuditRunner({ url }: Props) {
       storeHistory(window.localStorage, next); notifyHistoryChanged(); lastRecordRef.current = serialized;
       if (stream.phase === "done" || stream.phase === "error") queueMicrotask(() => setSaved(true));
     } catch { /* Audit display must never fail because storage is unavailable. */ }
-  }, [historyRun, ready, settings, stream.phase, stream.rollup, stream.stoppedEarly, url]);
+  }, [historyRun, ready, settings, stream.phase, stream.rollup, stream.stoppedEarly, stream.error, url]);
 
   return (
     <>

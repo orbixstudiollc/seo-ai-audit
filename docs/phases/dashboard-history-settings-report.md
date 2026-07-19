@@ -19,13 +19,19 @@
 
 ## Storage schemas
 
-History key: `seo-ai-audit:history:v2` (with automatic migration from v1).
+History key: `seo-ai-audit:history:v3` (with automatic migration from v1/v2).
 Every submitted query is recorded immediately and updated in place through
 started, failed, partial, or complete status. Records contain a local ID,
 URL/final URL, title, mode, timestamp, optional compact lens scores, and
 optional site page count. Full reports, provider responses, page content, API
 keys, and headers are deliberately not stored, keeping records compact and
 avoiding localStorage quota pressure.
+
+V3 adds a bounded detail snapshot so users can reopen useful context from each
+dashboard card: up to five weakest signals, blockers, question gaps, citation
+claims, rewrite count, word count, or site worst-pages/common-findings data.
+Older migrated records remain usable and explain that a rerun is needed to
+populate the new snapshot.
 
 Settings key: `seo-ai-audit:settings:v1`. Invalid, corrupt, or future-version data falls back to safe defaults. Defaults: single-page mode, 25 records, autosave on, clear confirmation on, system motion preference.
 
@@ -41,9 +47,9 @@ Settings key: `seo-ai-audit:settings:v1`. Invalid, corrupt, or future-version da
 ```text
 pnpm lint       PASS
 pnpm typecheck  PASS
-pnpm test       PASS — 29 files, 237 tests
+pnpm test       PASS — 29 files, 239 tests
 pnpm build      PASS — /dashboard statically generated
-pnpm e2e        PASS — 18 Chromium journeys
+pnpm e2e        PASS — 19 Chromium journeys
 ```
 
 E2E covers persistent dashboard records, removal/empty state, global Settings, default-mode persistence, single-audit autosave, whole-site single-record autosave, keyboard focus return, existing responsive report checks, and axe checks.

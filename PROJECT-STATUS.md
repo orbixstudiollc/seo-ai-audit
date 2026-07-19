@@ -29,7 +29,8 @@ links, FAQ JSON-LD, result social metadata, and a validated plain-JSON fallback
 for providers that reject structured output. A real production audit completed
 through both provider calls and saved its compact browser-local history record.
 Every submitted query is recorded locally and updated through started, failed,
-partial, or complete status. Gates are green at 237 tests and 18 Playwright
+partial, or complete status. Each audit card can reopen a bounded review
+snapshot without storing the full report. Gates are green at 239 tests and 19 Playwright
 journeys. Auth/server persistence stays
 deferred (Phase 5), and the Supabase wipe SQL is still awaiting the user.
 

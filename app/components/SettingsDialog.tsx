@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
-import { HISTORY_CHANGED_EVENT, HISTORY_KEY, LEGACY_HISTORY_KEY } from "@/lib/history";
+import { HISTORY_CHANGED_EVENT, HISTORY_KEY, LEGACY_HISTORY_KEY, LEGACY_HISTORY_V1_KEY } from "@/lib/history";
 import { Button } from "./ui/Button";
 
 type Props = { open: boolean; onClose: () => void; triggerRef: React.RefObject<HTMLButtonElement | null> };
@@ -33,6 +33,7 @@ export function SettingsDialog({ open, onClose, triggerRef }: Props) {
     if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from this browser?")) return;
     window.localStorage.removeItem(HISTORY_KEY);
     window.localStorage.removeItem(LEGACY_HISTORY_KEY);
+    window.localStorage.removeItem(LEGACY_HISTORY_V1_KEY);
     window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT));
   }
 

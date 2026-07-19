@@ -272,3 +272,23 @@ NEXT: No release work remains for this change.
 CONTEXT: Current key `seo-ai-audit:history:v2`; legacy key is read only when v2
 is absent. Query records remain compact and privacy-safe—no page content,
 reports, provider responses, headers, or credentials are stored.
+
+## 2026-07-19 · Dashboard card redesign and saved details · main
+
+DONE: Redesigned every history row as a responsive audit card with prominent
+status, mode, title/domain, average score, four-lens strip, and grouped actions.
+Added an accessible native “View details” disclosure backed by history v3:
+single audits retain bounded weakest-signal, blocker, question-gap, citation,
+rewrite-count, word-count, and safe error summaries; site audits retain bounded
+worst-page/common-finding/page-failure summaries. V1 and v2 records migrate
+without loss and display a clear rerun prompt when no snapshot exists. Snapshot
+arrays are capped at five and strings at 500 characters; full reports, fetched
+content, raw provider responses, headers, and credentials remain unstored.
+Gates: lint/typecheck/build PASS, 239/239 tests, 19/19 Playwright journeys,
+including expanded-card overflow verification at 320px.
+
+NEXT: Deploy and live-verify a new completed audit’s details disclosure.
+
+CONTEXT: Current key `seo-ai-audit:history:v3`; v2 and v1 are migration-only.
+The redesign uses the existing Swiss/editorial tokens and native `<details>` /
+`<summary>` keyboard behavior.

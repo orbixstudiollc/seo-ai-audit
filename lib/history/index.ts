@@ -1,12 +1,34 @@
-import type { Lens } from "@aeo/scoring";
+import { SIGNAL_IDS, type Lens, type SignalId } from "@aeo/scoring";
 
-export const HISTORY_KEY = "seo-ai-audit:history:v2";
-export const LEGACY_HISTORY_KEY = "seo-ai-audit:history:v1";
+export const HISTORY_KEY = "seo-ai-audit:history:v3";
+export const LEGACY_HISTORY_KEY = "seo-ai-audit:history:v2";
+export const LEGACY_HISTORY_V1_KEY = "seo-ai-audit:history:v1";
 export const HISTORY_CHANGED_EVENT = "seo-ai-audit:history-changed";
-export const HISTORY_VERSION = 2;
+export const HISTORY_VERSION = 3;
 
 export type AuditHistoryMode = "single" | "site";
 export type AuditHistoryStatus = "started" | "complete" | "partial" | "failed";
+
+export interface SingleAuditHistoryDetails {
+  kind: "single";
+  wordCount?: number;
+  weakestSignals: { id: SignalId; score: number }[];
+  blockers: string[];
+  questionGaps: string[];
+  citationClaims: string[];
+  rewriteCount: number;
+  errorMessage?: string;
+}
+
+export interface SiteAuditHistoryDetails {
+  kind: "site";
+  pagesFailed: number;
+  worstPages: { url: string; title: string; overallScore: number }[];
+  commonFindings: { issue: string; count: number }[];
+  errorMessage?: string;
+}
+
+export type AuditHistoryDetails = SingleAuditHistoryDetails | SiteAuditHistoryDetails;
 
 export interface AuditHistoryRecord {
   id: string;
@@ -19,6 +41,7 @@ export interface AuditHistoryRecord {
   status: AuditHistoryStatus;
   scores: Record<Lens, number> | null;
   pageCount?: number;
+  details?: AuditHistoryDetails;
 }
 
 export interface HistoryFilters {
@@ -38,6 +61,31 @@ function isScores(value: unknown): value is Record<Lens, number> {
   );
 }
 
+function isShortStrings(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length <= 5 && value.every((item) => typeof item === "string" && item.length <= 500);
+}
+
+function isDetails(value: unknown): value is AuditHistoryDetails {
+  if (!isRecord(value)) return false;
+  const errorOk = value.errorMessage === undefined || (typeof value.errorMessage === "string" && value.errorMessage.length <= 500);
+  if (value.kind === "single") {
+    return errorOk &&
+      (value.wordCount === undefined || (Number.isInteger(value.wordCount) && Number(value.wordCount) >= 0)) &&
+      Array.isArray(value.weakestSignals) && value.weakestSignals.length <= 5 && value.weakestSignals.every((item) =>
+        isRecord(item) && typeof item.id === "string" && SIGNAL_IDS.includes(item.id as SignalId) && typeof item.score === "number" && Number.isFinite(item.score)) &&
+      isShortStrings(value.blockers) && isShortStrings(value.questionGaps) && isShortStrings(value.citationClaims) &&
+      Number.isInteger(value.rewriteCount) && Number(value.rewriteCount) >= 0;
+  }
+  if (value.kind === "site") {
+    return errorOk && Number.isInteger(value.pagesFailed) && Number(value.pagesFailed) >= 0 &&
+      Array.isArray(value.worstPages) && value.worstPages.length <= 5 && value.worstPages.every((item) =>
+        isRecord(item) && typeof item.url === "string" && item.url.length <= 2048 && typeof item.title === "string" && item.title.length <= 500 && typeof item.overallScore === "number" && Number.isFinite(item.overallScore)) &&
+      Array.isArray(value.commonFindings) && value.commonFindings.length <= 5 && value.commonFindings.every((item) =>
+        isRecord(item) && typeof item.issue === "string" && item.issue.length <= 500 && Number.isInteger(item.count) && Number(item.count) >= 0);
+  }
+  return false;
+}
+
 export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
   if (!isRecord(value)) return false;
   return (
@@ -50,6 +98,7 @@ export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
     typeof value.createdAt === "string" &&
     !Number.isNaN(Date.parse(value.createdAt)) &&
     (value.scores === null || isScores(value.scores)) &&
+    (value.details === undefined || isDetails(value.details)) &&
     (value.finalUrl === undefined || typeof value.finalUrl === "string") &&
     (value.pageCount === undefined || (Number.isInteger(value.pageCount) && Number(value.pageCount) >= 0))
   );
@@ -62,15 +111,18 @@ export function loadHistory(storage: Pick<Storage, "getItem">): AuditHistoryReco
       const parsed: unknown = JSON.parse(current);
       return Array.isArray(parsed) ? parsed.filter(isHistoryRecord) : [];
     }
-    const raw = storage.getItem(LEGACY_HISTORY_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((value): AuditHistoryRecord[] => {
-      if (!isRecord(value) || value.version !== 1) return [];
-      const migrated = { ...value, version: HISTORY_VERSION };
-      return isHistoryRecord(migrated) ? [migrated] : [];
-    });
+    for (const legacyKey of [LEGACY_HISTORY_KEY, LEGACY_HISTORY_V1_KEY]) {
+      const raw = storage.getItem(legacyKey);
+      if (!raw) continue;
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.flatMap((value): AuditHistoryRecord[] => {
+        if (!isRecord(value) || (value.version !== 1 && value.version !== 2)) return [];
+        const migrated = { ...value, version: HISTORY_VERSION };
+        return isHistoryRecord(migrated) ? [migrated] : [];
+      });
+    }
+    return [];
   } catch {
     return [];
   }

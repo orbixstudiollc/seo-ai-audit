@@ -16,7 +16,7 @@ the browser; nothing is persisted server-side.
    Auth is Phase 5, a separate future phase (restore point:
    `backup/pre-rewrite`).
 2. **No database.** v1 is server-stateless. No drizzle, no postgres, no
-   Supabase client. The client may keep versioned, compact audit queries, status, summaries, and
+   Supabase client. The client may keep versioned, compact audit queries, status, bounded review snapshots, and
    preferences in localStorage; full reports and credentials are never stored.
 3. **Server-side LLM key.** Audits run on a key the *operator* configures in
    the server env (Vercel) — never a per-user/BYOK key (that's gone with the
