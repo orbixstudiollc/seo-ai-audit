@@ -16,9 +16,13 @@ No account, no signup, no stored data.
    `backup/pre-rewrite`).
 2. **No database.** v1 is stateless. No drizzle, no postgres, no Supabase
    client. Nothing is persisted server-side; the client holds the report.
-3. **Server-side LLM key.** Audits run on `ANTHROPIC_API_KEY` from the server
-   env (Vercel). BYOK is gone. `AUDIT_TEST_MOCK=1` selects the deterministic
-   mock model (no key, no spend) for tests and CI.
+3. **Server-side LLM key.** Audits run on a key the *operator* configures in
+   the server env (Vercel) — never a per-user/BYOK key (that's gone with the
+   auth teardown). The operator may point that key at Anthropic direct, an
+   Anthropic-compatible proxy, or any OpenAI-compatible endpoint
+   (OpenRouter, zenmuz.ai, Ollama, ...) — see "AI provider configuration"
+   below. `AUDIT_TEST_MOCK=1` selects the deterministic mock model (no key,
+   no spend) for tests and CI.
 4. **User-supplied URLs are hostile input.** Every fetch goes through
    `lib/import/ssrfGuard.ts` (private/loopback/metadata IP blocking) plus
    timeout, size, and redirect caps. See `docs/phases/ws2-audit-api-spec.md`.
@@ -80,6 +84,42 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 plus the workstream-specific verification in its spec (e2e, deploy check,
 axe). Report actual command output in your phase report, not "passed".
 
+## AI provider configuration
+
+The two LLM calls per audit (RUB rubric scoring, then rewrite generation) run
+through `lib/audit/provider.ts`'s `resolveProvider()`, env-first:
+
+1. **`ANTHROPIC_API_KEY` alone** (no other `AI_*` var) — the default,
+   backward-compatible path. Real Anthropic API, built-in per-tier models
+   (Haiku for scoring, Sonnet for rewrites). Existing deployments configured
+   this way are unaffected by anything below.
+2. **`AI_PROVIDER=openai-compatible`** + `AI_API_KEY` + `AI_BASE_URL` +
+   `AI_MODEL` — one code path (the AI SDK's OpenAI client, hitting the
+   classic `/chat/completions` route, not the newer Responses API) covers
+   OpenRouter, zenmuz.ai, Ollama's OpenAI-compat mode, vLLM, LiteLLM, and
+   most other OpenAI-compatible proxies. `AI_MODEL` runs both LLM calls —
+   custom providers get one model, not the cheap/strong split.
+3. **`AI_PROVIDER=anthropic`** + `AI_API_KEY` (falls back to
+   `ANTHROPIC_API_KEY` if unset) + optional `AI_BASE_URL` (an
+   Anthropic-compatible proxy) + optional `AI_MODEL` (defaults to the
+   built-in per-tier ids).
+
+An unrecognized `AI_PROVIDER` value, or nothing configured at all, falls back
+toward the safest known-good state (never crashes the process to resolve
+credentials). See `.env.example` for the full var list and `lib/audit/provider.ts`
+for the resolution order. Keys are never logged — provider/LLM failures are
+mapped through `lib/audit/errors.ts`'s `mapLlmError`, which reads only a
+numeric status code and a retry-after header off the SDK error, never the raw
+error object (which can carry the Authorization header).
+
+No provider configured → the route still validates the URL, fetches, and
+extracts the page, and streams `meta` + `signals` (those don't need an LLM);
+only the `scores`/`rewrites` phase fails, with a generic, key-safe `server`
+error event. Same behavior regardless of *why* no provider is configured.
+
+DATA-CONTRACT is unaffected — provider choice is a server-side implementation
+detail; the SSE wire shape (`docs/DATA-CONTRACT.md`) doesn't change.
+
 ## Deployment
 
 Vercel project `seo-ai-audit` (team `orbix2`, project
@@ -95,4 +135,5 @@ before — see docs/DECISIONS.md D-007).
 - Site-wide crawling (v1 audits exactly one URL's content).
 - Headless-browser rendering for JS-heavy pages (flag "may be incomplete"
   instead, as the content extractor does today).
-- Multi-provider/BYOK keys, cost guardrails beyond a per-audit cap.
+- Per-user BYOK keys (multi-provider *server*-key config exists — see "AI
+  provider configuration"), cost guardrails beyond a per-audit cap.

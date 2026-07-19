@@ -6,8 +6,18 @@ test("landing page renders hero and a focusable URL form", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
   const input = page.getByRole("textbox", { name: "URL to audit" });
+  // .last(): several ancestor divs "have" the input; the closest one (the
+  // styled input wrapper itself, carrying the focus-within style) is last
+  // in document order among outer-to-inner matches.
+  const wrapper = page.locator("div", { has: input }).last();
+  const borderBefore = await wrapper.evaluate((el) => getComputedStyle(el).borderColor);
+
   await input.focus();
   await expect(input).toBeFocused();
+
+  // A visible focus treatment, not just programmatic focus (WCAG 2.4.7).
+  const borderAfter = await wrapper.evaluate((el) => getComputedStyle(el).borderColor);
+  expect(borderAfter).not.toBe(borderBefore);
 });
 
 test("invalid URL shows an inline error and stays on the landing page", async ({ page }) => {
