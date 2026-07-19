@@ -480,3 +480,6 @@ provider task.
 CONTEXT: The free DataForSEO sandbox still requires the account API login and
 API password. Set `DATAFORSEO_BASE_URL=https://sandbox.dataforseo.com` for a
 zero-cost dummy-data validation before switching to the live hostname.
+
+DEPLOYED: Account email error guidance commit `15f8e8b` is production-ready as
+`dpl_CEr8AWNgehmbfsH1PMxgLi2Z1V7E` on the canonical alias.

@@ -42,6 +42,8 @@ Date: 2026-07-20
   Production HTML and the rendered browser both expose the optional account
   drawer. Anonymous history returns HTTP 200, while `/api/account/link`
   without a verified session returns HTTP 401 `invalid_session`.
+- Follow-up commit `15f8e8b` adds specific invalid-address and email-rate-limit
+  guidance and is live as `dpl_CEr8AWNgehmbfsH1PMxgLi2Z1V7E`.
 
 ## Live account proof
 
