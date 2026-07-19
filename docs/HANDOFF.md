@@ -412,13 +412,11 @@ Added Phase-2-ready provider-task and usage-ledger tables. Gates pass: lint,
 typecheck, production build, 251 tests, and 21 Playwright journeys. Full report:
 `docs/phases/supabase-phase1-report.md`.
 
-NEXT: Run `supabase/migrations/202607200001_phase1_audit_storage.sql` in the
-Supabase SQL editor, verify `audit_runs` exists, then commit, push, deploy, and
-run a real audit to confirm `audit_runs` + `audit_reports` rows. Do not deploy
-as “cloud ready” before that SQL succeeds.
+NEXT: Push and deploy, then run a real audit to confirm `audit_runs` +
+`audit_reports` rows and reopen the cloud report from the dashboard.
 
-CONTEXT: The Supabase project currently returns `PGRST205` for `audit_runs`;
-the legacy `public.audits` endpoint is present but empty and was not touched.
-Vercel reportedly has the URL, publishable key, and rotated secret configured.
-When the schema is absent or unavailable, the app intentionally returns 503
-from cloud routes and preserves browser-only behavior without data loss.
+CONTEXT: The migration was applied successfully on 2026-07-20. Public probes
+for all five new tables return HTTP 401 / PostgreSQL `42501`, confirming the
+schema exists and publishable-key access is denied. The legacy `public.audits`
+endpoint is present but empty and was not touched. Vercel reportedly has the
+URL, publishable key, and rotated secret configured.

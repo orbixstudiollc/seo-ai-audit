@@ -29,12 +29,12 @@ Date: 2026-07-20
 - Unit/integration: 251 passed.
 - Production build: passed.
 - Playwright: 21 passed.
-- Live Supabase schema probe: `audit_runs` currently returns `PGRST205`; the
-  migration has not yet been applied. Existing `public.audits` returned an
-  empty array and was not modified.
+- Migration applied successfully in the Supabase SQL Editor on 2026-07-20.
+- Public probes for all five tables return HTTP 401 / PostgreSQL `42501`,
+  confirming the tables exist and publishable-key access is denied.
+- Existing `public.audits` returned an empty array and was not modified.
 
 ## Activation requirement
 
-Run `supabase/migrations/202607200001_phase1_audit_storage.sql` in the project
-SQL editor, then deploy. Until the table exists, the API returns 503 and the UI
-stays safely in browser-fallback mode.
+Deploy the Phase 1 application, then run a real audit and confirm rows in
+`audit_runs` and `audit_reports` plus dashboard report reopening.
