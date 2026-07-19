@@ -5,6 +5,7 @@ import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 import { HISTORY_CHANGED_EVENT, HISTORY_KEY, LEGACY_HISTORY_KEY, LEGACY_HISTORY_V2_KEY, LEGACY_HISTORY_V1_KEY } from "@/lib/history";
 import { clearAuditReports } from "@/lib/reports";
+import { clearCloudHistory } from "@/lib/cloud/history";
 import type { HistoryLimit } from "@/lib/settings";
 import { Button } from "./ui/Button";
 
@@ -32,12 +33,13 @@ export function SettingsDialog({ open, onClose, triggerRef }: Props) {
   if (!open) return null;
 
   function clearHistory() {
-    if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from this browser?")) return;
+    if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from cloud storage and this browser?")) return;
     window.localStorage.removeItem(HISTORY_KEY);
     window.localStorage.removeItem(LEGACY_HISTORY_KEY);
     window.localStorage.removeItem(LEGACY_HISTORY_V2_KEY);
     window.localStorage.removeItem(LEGACY_HISTORY_V1_KEY);
     void clearAuditReports().catch(() => undefined);
+    void clearCloudHistory();
     window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT));
   }
 
@@ -78,7 +80,7 @@ export function SettingsDialog({ open, onClose, triggerRef }: Props) {
               <option value="500">500 audits</option>
             </select>
           </label>
-          <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={settings.autoSaveAudits} onChange={(e) => setSettings({ ...settings, autoSaveAudits: e.target.checked })} /><span><strong className="block">Save every audit query</strong><span className="text-text-2">Stores query history and reopenable reports only in this browser.</span></span></label>
+          <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={settings.autoSaveAudits} onChange={(e) => setSettings({ ...settings, autoSaveAudits: e.target.checked })} /><span><strong className="block">Save every audit query</strong><span className="text-text-2">Stores query history and reopenable reports in private cloud storage, with a browser fallback.</span></span></label>
           <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={settings.confirmBeforeClear} onChange={(e) => setSettings({ ...settings, confirmBeforeClear: e.target.checked })} /><span><strong className="block">Confirm before clearing history</strong><span className="text-text-2">Helps prevent accidental removal.</span></span></label>
           <label className="flex flex-col gap-1.5">
             <span className="font-medium">Reduced motion</span>
@@ -92,7 +94,7 @@ export function SettingsDialog({ open, onClose, triggerRef }: Props) {
           <Button size="sm" onClick={() => setSettings(DEFAULT_SETTINGS)}>Reset settings</Button>
           <Button size="sm" onClick={clearHistory}>Clear history</Button>
         </div>
-        <p className="mt-5 text-xs leading-relaxed text-text-3">Preferences and audit history stay in this browser. Clearing browser data removes them. No account synchronization is enabled.</p>
+        <p className="mt-5 text-xs leading-relaxed text-text-3">Audit history is linked to a private device identifier. Clearing browser data removes the offline copy and the identifier needed to reopen its cloud history. Account synchronization is not enabled yet.</p>
       </div>
     </div>
   );

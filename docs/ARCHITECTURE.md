@@ -1,23 +1,26 @@
 # Architecture — SEO AI Audit v1 (anonymous)
 
-Status: **target architecture** for the v1 rebuild. Owner: coordinator session
-(Fable). Last updated: 2026-07-19.
+Status: **current architecture**. Last updated: 2026-07-20.
 
 ## Product in one line
 
 An open, anonymous, low-friction tool: paste a URL on the landing page, get a
 streamed AI-search audit (0–100 lens scores + evidence-backed findings) back.
-No account or signup. Audit history, reopenable reports, and preferences may be stored locally in
-the browser; nothing is persisted server-side.
+No account or signup. Audit history, reopenable reports, and preferences are
+persisted through server-only Supabase routes and cached locally for offline
+fallback.
 
 ## Hard constraints (do not violate in any workstream)
 
 1. **No auth.** No better-auth, no sessions, no cookies that identify users.
    Auth is Phase 5, a separate future phase (restore point:
    `backup/pre-rewrite`).
-2. **No database.** v1 is server-stateless. No drizzle, no postgres, no
-   Supabase client. The client may keep versioned, compact audit queries, status, bounded review snapshots, and
-   preferences in localStorage. Reopenable reports may be stored in browser IndexedDB; credentials are never stored.
+2. **Anonymous cloud persistence (Phase 1, D-011).** Supabase stores audit
+   summaries, reopenable reports, and preferences. Browser clients never access
+   the audit tables directly: RLS is enabled with no public policies, and a
+   server route hashes a random per-device ownership token before using the
+   server-only Supabase secret. localStorage/IndexedDB remain an offline cache
+   and migration source. Credentials are never stored in an audit record.
 3. **Server-side LLM key.** Audits run on a key the *operator* configures in
    the server env (Vercel) — never a per-user/BYOK key (that's gone with the
    auth teardown). The operator may point that key at Anthropic direct, an
@@ -52,12 +55,16 @@ Browser                          Vercel (Next.js 16, App Router)
                                    ├─ LLM rubric (server key): 7 RUB signals,
                                    │    findings, rewrites
                                    └─ SSE stream of AuditStreamEvent frames
+
+Dashboard/report storage ─────►  /api/history + /api/settings
+                                   ├─ validate device ownership token
+                                   ├─ SHA-256 token → opaque owner hash
+                                   └─ server-only Supabase client → RLS tables
 ```
 
-Data flows one way: URL in → SSE events out → client-side state → rendered
-report. Completed summaries may be added to browser-local history and full
-reports may be reopened from browser-local IndexedDB. Share = the URL itself
-(`/audit?url=…`); saved reports never leave the browser.
+Audit results still stream one way: URL in → SSE events out → client-side state
+→ rendered report. Summaries and reopenable reports are then written to
+Supabase and cached locally. Share remains the URL itself (`/audit?url=…`).
 
 ## Repository map (what exists, who owns what)
 
@@ -135,7 +142,8 @@ before — see docs/DECISIONS.md D-007).
 
 ## Known deferred items
 
-- Auth + persistence (Phase 5) — restore from `backup/pre-rewrite`.
+- Account auth and cross-device identity — anonymous device ownership ships in
+  Phase 1, while account linking remains deferred.
 - Headless-browser rendering for JS-heavy pages (flag "may be incomplete"
   instead, as the content extractor does today).
 - Per-user BYOK keys (multi-provider *server*-key config exists — see "AI

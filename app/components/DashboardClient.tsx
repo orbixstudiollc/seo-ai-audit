@@ -14,12 +14,22 @@ import {
   averageScore,
   filterAndSortHistory,
   loadHistory,
+  mergeHistoryRecords,
   removeHistoryRecord,
   storeHistory,
   type AuditHistoryRecord,
   type AuditHistoryStatus,
 } from "@/lib/history";
-import { clearAuditReports, deleteAuditReport } from "@/lib/reports";
+import { clearAuditReports, deleteAuditReport, listAuditReports } from "@/lib/reports";
+import {
+  CLOUD_MIGRATION_KEY,
+  clearCloudHistory,
+  deleteCloudAudit,
+  loadCloudHistory,
+  migrateHistoryRecords,
+  saveCloudAudit,
+  type CloudSyncState,
+} from "@/lib/cloud/history";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 
@@ -114,6 +124,7 @@ function AuditHistoryCard({ record, onRemove }: { record: AuditHistoryRecord; on
 export function DashboardClient() {
   const [records, setRecords] = useState<AuditHistoryRecord[]>([]);
   const [ready, setReady] = useState(false);
+  const [cloudState, setCloudState] = useState<CloudSyncState>("syncing");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"all" | "single" | "site">("all");
   const [sort, setSort] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
@@ -121,10 +132,32 @@ export function DashboardClient() {
   const { settings } = useLocalSettings();
 
   useEffect(() => {
-    const sync = () => { setRecords(loadHistory(window.localStorage)); setReady(true); };
-    sync(); window.addEventListener(HISTORY_CHANGED_EVENT, sync); window.addEventListener("storage", sync);
-    return () => { window.removeEventListener(HISTORY_CHANGED_EVENT, sync); window.removeEventListener("storage", sync); };
-  }, []);
+    let active = true;
+    const syncLocal = () => { setRecords(loadHistory(window.localStorage)); setReady(true); };
+    const hydrate = async () => {
+      const local = loadHistory(window.localStorage);
+      setRecords(local); setReady(true);
+      const cloud = await loadCloudHistory();
+      if (!active) return;
+      if (cloud === null) { setCloudState("local"); return; }
+      const merged = mergeHistoryRecords(cloud, local, settings.historyLimit);
+      storeHistory(window.localStorage, merged); setRecords(merged);
+      const summariesMigrated = await migrateHistoryRecords(merged);
+      if (summariesMigrated && window.localStorage.getItem(CLOUD_MIGRATION_KEY) !== "complete") {
+        const reports = await listAuditReports();
+        let reportsMigrated = true;
+        for (const report of reports) {
+          const record = merged.find((item) => item.id === report.id);
+          if (record && !await saveCloudAudit({ ...record, reportAvailable: true }, report)) reportsMigrated = false;
+        }
+        if (reportsMigrated) window.localStorage.setItem(CLOUD_MIGRATION_KEY, "complete");
+      }
+      if (!active) return;
+      setCloudState(summariesMigrated ? "synced" : "local");
+    };
+    void hydrate(); window.addEventListener(HISTORY_CHANGED_EVENT, syncLocal); window.addEventListener("storage", syncLocal);
+    return () => { active = false; window.removeEventListener(HISTORY_CHANGED_EVENT, syncLocal); window.removeEventListener("storage", syncLocal); };
+  }, [settings.historyLimit]);
 
   const visible = useMemo(() => filterAndSortHistory(records, { query, mode, sort }), [records, query, mode, sort]);
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
@@ -132,21 +165,22 @@ export function DashboardClient() {
   const pageRecords = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   function persist(next: AuditHistoryRecord[]) { storeHistory(window.localStorage, next); setRecords(next); window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT)); }
   function clearAll() {
-    if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from this browser?")) return;
+    if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from cloud storage and this browser?")) return;
     for (const key of [HISTORY_KEY, LEGACY_HISTORY_KEY, LEGACY_HISTORY_V2_KEY, LEGACY_HISTORY_V1_KEY]) window.localStorage.removeItem(key);
     void clearAuditReports().catch(() => undefined);
+    void clearCloudHistory().then((cleared) => setCloudState(cleared ? "synced" : "local"));
     setRecords([]); window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT));
   }
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.16em] text-text-3">Local workspace</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Audit dashboard</h1><p className="mt-2 max-w-xl text-sm text-text-2">Every audit query you run, with a compact review snapshot stored only in this browser.</p></div><Link href="/" className="inline-flex h-9 items-center bg-text-1 px-4 font-mono text-xs font-medium uppercase tracking-wider text-surface-1 hover:bg-accent-ink">New audit</Link></div>
+      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.16em] text-text-3">Audit workspace</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Audit dashboard</h1><p className="mt-2 max-w-xl text-sm text-text-2">Every audit query you run, with a durable cloud copy and an offline browser fallback.</p></div><Link href="/" className="inline-flex h-9 items-center bg-text-1 px-4 font-mono text-xs font-medium uppercase tracking-wider text-surface-1 hover:bg-accent-ink">New audit</Link></div>
 
       <Card label={`History (${records.length})`} aside={records.length > 0 ? <Button size="sm" variant="ghost" onClick={clearAll}>Clear history</Button> : undefined} bodyClassName="bg-surface-2">
         {records.length > 0 && <div className="grid gap-3 border-b border-line bg-surface-1 p-3 sm:grid-cols-3"><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Search<input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Title or domain" className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1" /></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Type<select value={mode} onChange={(event) => { setMode(event.target.value as typeof mode); setPage(1); }} className="h-9 border border-line-strong bg-surface-1 pl-10 pr-10 font-sans text-sm normal-case tracking-normal text-text-1"><option value="all">All</option><option value="single">Single page</option><option value="site">Whole site</option></select></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Sort<select value={sort} onChange={(event) => { setSort(event.target.value as typeof sort); setPage(1); }} className="h-9 border border-line-strong bg-surface-1 pl-3 pr-10 font-sans text-sm normal-case tracking-normal text-text-1"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest score</option><option value="lowest">Lowest score</option></select></label></div>}
-        {!ready ? <p className="wb-skeleton p-6 text-sm text-text-3">Loading local history…</p> : records.length === 0 ? <div className="bg-surface-1 p-8 text-center"><h2 className="font-semibold">No audits saved yet</h2><p className="mt-2 text-sm text-text-2">Run your first audit and it will appear here automatically.</p><Link href="/" className="mt-4 inline-block font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">Start an audit →</Link></div> : visible.length === 0 ? <p className="bg-surface-1 p-8 text-center text-sm text-text-2">No audits match these filters.</p> : <><ul className="grid gap-4 p-3 sm:p-4">{pageRecords.map((record) => <AuditHistoryCard key={record.id} record={record} onRemove={() => { void deleteAuditReport(record.id).catch(() => undefined); persist(removeHistoryRecord(records, record.id)); }} />)}</ul>{visible.length > PAGE_SIZE && <nav aria-label="History pagination" className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface-1 px-4 py-3"><p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, visible.length)} of {visible.length}</p><div className="flex items-center gap-3"><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} className="font-mono text-[10px] uppercase tracking-wider text-accent-ink hover:underline disabled:cursor-not-allowed disabled:text-text-3 disabled:no-underline">Previous</button><span className="font-mono text-[10px] uppercase tracking-wider text-text-2">Page {currentPage} of {totalPages}</span><button type="button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} className="font-mono text-[10px] uppercase tracking-wider text-accent-ink hover:underline disabled:cursor-not-allowed disabled:text-text-3 disabled:no-underline">Next</button></div></nav>}</>}
+        {!ready ? <p className="wb-skeleton p-6 text-sm text-text-3">Loading audit history…</p> : records.length === 0 ? <div className="bg-surface-1 p-8 text-center"><h2 className="font-semibold">No audits saved yet</h2><p className="mt-2 text-sm text-text-2">Run your first audit and it will appear here automatically.</p><Link href="/" className="mt-4 inline-block font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">Start an audit →</Link></div> : visible.length === 0 ? <p className="bg-surface-1 p-8 text-center text-sm text-text-2">No audits match these filters.</p> : <><ul className="grid gap-4 p-3 sm:p-4">{pageRecords.map((record) => <AuditHistoryCard key={record.id} record={record} onRemove={() => { void deleteAuditReport(record.id).catch(() => undefined); void deleteCloudAudit(record.id).then((deleted) => setCloudState(deleted ? "synced" : "local")); persist(removeHistoryRecord(records, record.id)); }} />)}</ul>{visible.length > PAGE_SIZE && <nav aria-label="History pagination" className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface-1 px-4 py-3"><p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, visible.length)} of {visible.length}</p><div className="flex items-center gap-3"><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} className="font-mono text-[10px] uppercase tracking-wider text-accent-ink hover:underline disabled:cursor-not-allowed disabled:text-text-3 disabled:no-underline">Previous</button><span className="font-mono text-[10px] uppercase tracking-wider text-text-2">Page {currentPage} of {totalPages}</span><button type="button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} className="font-mono text-[10px] uppercase tracking-wider text-accent-ink hover:underline disabled:cursor-not-allowed disabled:text-text-3 disabled:no-underline">Next</button></div></nav>}</>}
       </Card>
-      <p className="text-center text-xs text-text-3">History stays on this device. Clearing browser data removes it; account synchronization is not enabled.</p>
+      <p className="text-center text-xs text-text-3" role="status">{cloudState === "syncing" ? "Synchronizing audit history…" : cloudState === "synced" ? "Audit history is synchronized to private cloud storage, with an offline copy in this browser." : "Cloud storage is temporarily unavailable. Audits remain available in this browser and will synchronize later."}</p>
     </main>
   );
 }

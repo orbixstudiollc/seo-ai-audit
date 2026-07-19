@@ -5,19 +5,21 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-19 · by: production release session · branch `main`
+Last updated: 2026-07-20 · by: Supabase Phase 1 session · branch `main`
 
 ## Product
 
 Open, anonymous, low-friction tool: paste a URL → streamed AI-search audit
 (AEO / GEO / Citability / AI Overview scores + evidence-backed findings).
-No account or signup; optional audit queries and reports stay only in the browser. **Live:**
+No account or signup; audit queries and reports have a Supabase-backed durable
+store with a browser fallback. **Live:**
 https://seo-ai-audit-pied.vercel.app
 
 ## Current status (one paragraph)
 
-The anonymous v1 product is **feature-complete, integrated on `main`, and live
-in production**. It supports anonymous single-page and whole-site audits of up to 500 discovered pages,
+The anonymous v1 product is live in production, and Supabase Phase 1 is
+implemented locally pending one database migration and deployment. It supports
+anonymous single-page and whole-site audits of up to 500 discovered pages,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
 typecheck, 241 unit/integration tests, production build, and 21 Playwright
@@ -27,13 +29,13 @@ input correctly, and the security headers, robots.txt, and llms.txt are present.
 Phase 4 adds dashboard/history/settings, local report exports, stateless share
 links, FAQ JSON-LD, result social metadata, and a validated plain-JSON fallback
 for providers that reject structured output. A real production audit completed
-through both provider calls and saved its compact browser-local history record.
-Every submitted query is recorded locally and updated through started, failed,
-partial, or complete status. Each newly completed or meaningfully partial audit
-can be reopened later as a read-only report from browser-local IndexedDB, while
-the dashboard keeps compact versioned summaries in localStorage, supports up to 500 records, and paginates 10 cards at a time. Failed bulk pages can be retried as individual audits without rerunning the site. Gates are green at 241 tests and 21 Playwright
-journeys. Auth/server persistence stays
-deferred (Phase 5), and the Supabase wipe SQL is still awaiting the user.
+through both provider calls and saved its compact history record.
+Every submitted query is cached locally and, after the Phase 1 migration is
+applied, synchronized to private Supabase tables through server-only routes.
+Completed reports can be reopened from cloud or IndexedDB; the dashboard
+supports 500 records and paginates 10 cards at a time. Failed bulk pages can be
+retried individually. Current gates: lint/typecheck/build, 251 tests, and 21
+Playwright journeys. Account auth remains deferred.
 Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM cost.
 
 ## Plan → status
@@ -50,21 +52,22 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 7 | WS4 crawl + bulk: bulk audit, site crawl, SSRF pinned-IP fix | `ws4-bulk-audit-crawl` `2cc82fe` | ✅ merged + deployed |
 | 8 | Phase 4a: dashboard, browser-local history, global settings | `main` via PR #1 | ✅ merged + deployed |
 | 9 | Phase 4b: export, share, schema output, result OG | `main` via PR #1 | ✅ merged + deployed |
-| 10 | Phase 5 auth + persistence | restore from `backup/pre-rewrite` | ⏸ **deferred by product decision D-001** |
+| 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` working tree | 🟡 code complete; SQL migration + deploy pending |
+| 11 | Account auth + cross-device identity | future phase | ⏸ deferred |
 
 ## Pending user actions
 
-1. **Credential hygiene** — rotate the provider credential shared during setup.
-2. **Supabase wipe** — run `scripts/db-wipe.sql` in the Supabase SQL editor
-   (D-009; all 7 pre-pivot tables verified empty; also staged on branch
-   `claude/reset-schema-permissions-wb2yex`).
+1. **Apply Phase 1 schema** — run
+   `supabase/migrations/202607200001_phase1_audit_storage.sql` in the Supabase
+   SQL editor. The project currently has no `audit_runs` table.
+2. **Credential hygiene** — keep the rotated Supabase secret only in Vercel.
 3. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
    `ENCRYPTION_KEY` vars from Vercel (WS1 report, open question 1).
 
 ## Key decisions (full log: `docs/DECISIONS.md`)
 
-- D-001 no auth / no DB in v1 (Phase 5 deferred); restore point
-  `backup/pre-rewrite` = `7897e32`.
+- D-011 supersedes D-001's no-database portion: anonymous Supabase persistence
+  is Phase 1; account auth remains deferred.
 - D-004 SSE contract v1: `meta → signals → scores → rewrites → done`
   (DATA-CONTRACT v1.0 — the law for all workstreams).
 - D-005 no det-only degraded mode; D-006 share link = re-run;

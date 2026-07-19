@@ -9,6 +9,7 @@ import {
   storeSettings,
   type AppSettings,
 } from "@/lib/settings";
+import { loadCloudSettings, saveCloudSettings } from "@/lib/cloud/settings";
 
 export function useLocalSettings() {
   const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -19,6 +20,15 @@ export function useLocalSettings() {
     queueMicrotask(() => {
       sync();
       setReady(true);
+      void loadCloudSettings().then((result) => {
+        if (result.state === "found") {
+          storeSettings(window.localStorage, result.settings);
+          setSettingsState(result.settings);
+          notifySettingsChanged();
+        } else if (result.state === "missing") {
+          void saveCloudSettings(loadSettings(window.localStorage));
+        }
+      });
     });
     window.addEventListener(SETTINGS_CHANGED_EVENT, sync);
     window.addEventListener("storage", sync);
@@ -32,6 +42,7 @@ export function useLocalSettings() {
     storeSettings(window.localStorage, next);
     setSettingsState(next);
     notifySettingsChanged();
+    void saveCloudSettings(next);
   }, []);
 
   useEffect(() => {

@@ -49,7 +49,7 @@ function runTransaction(mode: IDBTransactionMode, operation: (store: IDBObjectSt
   }));
 }
 
-function isSavedReport(value: unknown): value is SavedAuditReport {
+export function isSavedReport(value: unknown): value is SavedAuditReport {
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
   if (item.version !== SAVED_REPORT_VERSION || typeof item.id !== "string" || typeof item.createdAt !== "string") return false;
@@ -72,6 +72,21 @@ export async function loadAuditReport(id: string): Promise<SavedAuditReport | nu
       request.onerror = () => { database.close(); resolve(null); };
     });
   } catch { return null; }
+}
+
+export async function listAuditReports(): Promise<SavedAuditReport[]> {
+  if (typeof indexedDB === "undefined") return [];
+  try {
+    const database = await openReportsDb();
+    return await new Promise((resolve) => {
+      const request = database.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll();
+      request.onsuccess = () => {
+        database.close();
+        resolve(Array.isArray(request.result) ? request.result.filter(isSavedReport) : []);
+      };
+      request.onerror = () => { database.close(); resolve([]); };
+    });
+  } catch { return []; }
 }
 
 export function deleteAuditReport(id: string): Promise<void> {

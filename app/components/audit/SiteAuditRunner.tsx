@@ -5,6 +5,7 @@ import { useSiteAuditStream } from "@/app/hooks/useSiteAuditStream";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { addHistoryRecord, createHistoryId, loadHistory, notifyHistoryChanged, storeHistory, type AuditHistoryRecord } from "@/lib/history";
 import { pruneAuditReports, saveAuditReport } from "@/lib/reports";
+import { saveCloudAudit } from "@/lib/cloud/history";
 import { SiteAuditReportView } from "./SiteAuditReportView";
 import { SavedAuditActions } from "./SavedAuditActions";
 
@@ -24,6 +25,7 @@ export function SiteAuditRunner({ url }: Props) {
   });
   const lastRecordRef = useRef("");
   const reportSavedRef = useRef(false);
+  const cloudStartedRef = useRef(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -51,6 +53,10 @@ export function SiteAuditRunner({ url }: Props) {
       const next = addHistoryRecord(current, record, settings.historyLimit);
       storeHistory(window.localStorage, next); notifyHistoryChanged(); lastRecordRef.current = serialized;
       void pruneAuditReports(new Set(next.map((item) => item.id))).catch(() => undefined);
+      if (!cloudStartedRef.current) {
+        cloudStartedRef.current = true;
+        void saveCloudAudit(record).then((savedToCloud) => { if (!savedToCloud) cloudStartedRef.current = false; });
+      }
       if (stream.phase === "done" || stream.phase === "error") {
         if (!reportSavedRef.current && stream.rollup) {
           reportSavedRef.current = true;
@@ -59,14 +65,20 @@ export function SiteAuditRunner({ url }: Props) {
             truncated: stream.truncated, pages: stream.pages, pageOrder: stream.pageOrder,
             rollup: stream.rollup, stoppedEarly: stream.stoppedEarly, error: stream.error,
           };
-          void saveAuditReport({ version: 1, id: historyRun.id, kind: "site", createdAt: historyRun.createdAt, phase: stream.phase, state })
+          const savedReport = { version: 1, id: historyRun.id, kind: "site", createdAt: historyRun.createdAt, phase: stream.phase, state } as const;
+          void saveAuditReport(savedReport)
             .then(() => {
               const records = loadHistory(window.localStorage);
               const updated = records.map((item) => item.id === historyRun.id ? { ...item, reportAvailable: true } : item);
               storeHistory(window.localStorage, updated); notifyHistoryChanged();
+              const cloudRecord = updated.find((item) => item.id === historyRun.id);
+              if (cloudRecord) void saveCloudAudit(cloudRecord, savedReport);
               setSaved(true);
             }).catch(() => { reportSavedRef.current = false; setSaved(true); });
-        } else if (!stream.rollup) queueMicrotask(() => setSaved(true));
+        } else if (!stream.rollup) {
+          void saveCloudAudit(record);
+          queueMicrotask(() => setSaved(true));
+        }
       }
     } catch { /* Audit display must never fail because storage is unavailable. */ }
   }, [historyRun, ready, settings, stream, url]);

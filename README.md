@@ -30,7 +30,8 @@ Rebuild happens in phased execution sessions; specs live in `specs/`.
    (`specs/phase-1.md`).
 2. **Phase 2** — anonymous URL → fetch → audit engine → streamed results.
 3. **Phase 3** — visual results dashboard.
-4. **Phase 4** — dashboard, local history/settings, export, share links, schema output, and social metadata.
+4. **Phase 4** — dashboard, history/settings, export, share links, schema output, and social metadata.
+5. **Supabase Phase 1** — durable anonymous history, reopenable reports, settings, and browser-cache migration.
 5. **Phase 5 (deferred)** — auth + persistence.
 
 ## Dev

@@ -42,3 +42,10 @@ propose; the coordinator records.
   writes specs/contracts, reviews diffs periodically; separate coding-model
   sessions implement WS1/WS2/WS3 in parallel against DATA-CONTRACT v1.0.
   Every session documents as it goes under `docs/` (RULE B).
+- **D-011** 2026-07-20 — **Supabase becomes the durable audit store without
+  adding accounts.** The user explicitly reprioritized persistence as Phase 1.
+  A random 256-bit device token is stored in the browser, hashed server-side,
+  and used to partition records. Supabase tables have RLS enabled and no public
+  policies; only server routes holding `SUPABASE_SECRET_KEY` can access them.
+  Browser storage remains an offline fallback and migration source. Account
+  auth/cross-device recovery remains a later phase.

@@ -92,9 +92,9 @@ export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
   if (!isRecord(value)) return false;
   return (
     value.version === HISTORY_VERSION &&
-    typeof value.id === "string" &&
-    typeof value.url === "string" &&
-    typeof value.title === "string" &&
+    typeof value.id === "string" && value.id.length > 0 && value.id.length <= 4096 &&
+    typeof value.url === "string" && value.url.length > 0 && value.url.length <= 2048 &&
+    typeof value.title === "string" && value.title.length <= 500 &&
     (value.mode === "single" || value.mode === "site") &&
     (value.status === "started" || value.status === "complete" || value.status === "partial" || value.status === "failed") &&
     typeof value.createdAt === "string" &&
@@ -102,7 +102,7 @@ export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
     (value.scores === null || isScores(value.scores)) &&
     (value.details === undefined || isDetails(value.details)) &&
     (value.reportAvailable === undefined || typeof value.reportAvailable === "boolean") &&
-    (value.finalUrl === undefined || typeof value.finalUrl === "string") &&
+    (value.finalUrl === undefined || (typeof value.finalUrl === "string" && value.finalUrl.length <= 2048)) &&
     (value.pageCount === undefined || (Number.isInteger(value.pageCount) && Number(value.pageCount) >= 0))
   );
 }
@@ -148,6 +148,29 @@ export function addHistoryRecord(
 
 export function removeHistoryRecord(records: AuditHistoryRecord[], id: string): AuditHistoryRecord[] {
   return records.filter((record) => record.id !== id);
+}
+
+/** Merge the durable cloud copy with the browser cache without duplicating runs. */
+export function mergeHistoryRecords(
+  cloud: AuditHistoryRecord[],
+  local: AuditHistoryRecord[],
+  limit = 500,
+): AuditHistoryRecord[] {
+  const merged = new Map(cloud.map((record) => [record.id, record]));
+  const statusRank: Record<AuditHistoryStatus, number> = { started: 0, failed: 1, partial: 2, complete: 3 };
+  for (const record of local) {
+    const remote = merged.get(record.id);
+    if (!remote) { merged.set(record.id, record); continue; }
+    const preferred = statusRank[record.status] >= statusRank[remote.status] ? record : remote;
+    const fallback = preferred === record ? remote : record;
+    const combined = { ...fallback, ...preferred };
+    if (remote.reportAvailable || record.reportAvailable) combined.reportAvailable = true;
+    else delete combined.reportAvailable;
+    merged.set(record.id, combined);
+  }
+  return [...merged.values()]
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, Math.max(1, Math.min(500, Math.floor(limit))));
 }
 
 export function averageScore(record: AuditHistoryRecord): number | null {

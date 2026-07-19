@@ -52,7 +52,7 @@ export default function Home() {
         </div>
       </main>
       <footer className="border-t border-line px-6 py-6 text-center font-mono text-xs text-text-3">
-        No accounts. Audit history and reopenable reports are saved only in your browser.
+        No accounts. Audit history and reopenable reports are saved to a private cloud workspace with an offline browser copy.
       </footer>
     </>
   );

@@ -64,8 +64,9 @@ export type AuditErrorKind =
   | "server";              // anything else (incl. LLM provider failures)
 ```
 
-`done` carries no `auditId` — nothing is persisted; the client already holds
-every event. (`WorkbenchAudit`, `getAuditStatus`-style resume, and
+`done` carries no `auditId` — the audit stream remains independent of
+persistence; the client already holds every event and saves it separately
+through `/api/history`. (`WorkbenchAudit`, `getAuditStatus`-style resume, and
 `already_running` are all deleted concepts.)
 
 ## 3. Payload shapes (unchanged, already in the repo — do not redefine)

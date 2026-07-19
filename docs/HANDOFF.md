@@ -401,3 +401,24 @@ NEXT: No release work remains for individual failed-page recovery.
 CONTEXT: The successful individual retry is saved as a normal single-page
 dashboard audit. The original saved site report remains an immutable snapshot;
 rerunning one page does not rewrite that historical site rollup.
+
+## 2026-07-20 · Supabase Phase 1 · main working tree
+
+DONE: Implemented anonymous Supabase persistence for audit summaries,
+reopenable reports, and settings using server-only routes, a random device
+token hashed before storage, private RLS tables, local migration/offline
+fallback, cloud/local recovery merge, and existing 500-record pagination.
+Added Phase-2-ready provider-task and usage-ledger tables. Gates pass: lint,
+typecheck, production build, 251 tests, and 21 Playwright journeys. Full report:
+`docs/phases/supabase-phase1-report.md`.
+
+NEXT: Run `supabase/migrations/202607200001_phase1_audit_storage.sql` in the
+Supabase SQL editor, verify `audit_runs` exists, then commit, push, deploy, and
+run a real audit to confirm `audit_runs` + `audit_reports` rows. Do not deploy
+as “cloud ready” before that SQL succeeds.
+
+CONTEXT: The Supabase project currently returns `PGRST205` for `audit_runs`;
+the legacy `public.audits` endpoint is present but empty and was not touched.
+Vercel reportedly has the URL, publishable key, and rotated secret configured.
+When the schema is absent or unavailable, the app intentionally returns 503
+from cloud routes and preserves browser-only behavior without data loss.
