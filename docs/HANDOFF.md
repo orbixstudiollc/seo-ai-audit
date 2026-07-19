@@ -263,9 +263,11 @@ failed, partial, or complete status. Existing v1 history migrates without data
 loss. Scoreless failures remain visible and rerunnable; score sorting keeps
 unscored queries after scored results. Clear-history removes both schema keys,
 and Settings copy now accurately describes all-query capture. Gates:
-lint/typecheck/build PASS, 237/237 tests, 18/18 Playwright journeys.
+lint/typecheck/build PASS, 237/237 tests, 18/18 Playwright journeys. Deployed as
+`dpl_4zoEoyv5prto7mK57Hzao4gvU8vk`; a live blocked-network query appeared on
+the dashboard as `failed` without scores, then the synthetic record was removed.
 
-NEXT: Deploy and verify a failed/no-score query appears on the live dashboard.
+NEXT: No release work remains for this change.
 
 CONTEXT: Current key `seo-ai-audit:history:v2`; legacy key is read only when v2
 is absent. Query records remain compact and privacy-safe—no page content,
