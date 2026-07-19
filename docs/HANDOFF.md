@@ -189,3 +189,26 @@ CONTEXT: Source and production are aligned at the 2026-07-19 release. The
 release branch `release/provider-ws4` remains on origin as a recoverable
 checkpoint. Provider configuration options are in `.env.example`; do not add
 auth or persistence without revisiting D-001.
+
+## 2026-07-19 · Dashboard/history/settings · phase4-dashboard-history-settings
+
+DONE: Added a persistent global header and accessible Settings drawer, a
+responsive `/dashboard`, versioned corruption-safe browser-local history and
+settings modules, compact summary autosave for single-page and whole-site
+audits, and post-audit Dashboard/Run another actions. Whole-site audits create
+one rollup history item. No database, auth, report content, credentials, or
+provider responses are stored. Gates: lint/typecheck/build PASS, 230/230 tests,
+16/16 Playwright journeys. Full report:
+`docs/phases/dashboard-history-settings-report.md`.
+
+NEXT: Coordinator review this branch, with particular attention to storage UX
+and the compact-summary/rerun decision; then merge and deploy if accepted.
+Separately resolve the production proxy’s lack of structured-output support and
+rotate the credential shared during configuration. Phase 4b export/share/schema
+features remain parked.
+
+CONTEXT: History key `seo-ai-audit:history:v1`, settings key
+`seo-ai-audit:settings:v1`; both are validated and versioned. Dashboard records
+cap at the user’s 10/25/50 preference and contain URLs, titles, status, lens
+scores, timestamps, and optional site page count only. D-001 still forbids
+server persistence/auth.

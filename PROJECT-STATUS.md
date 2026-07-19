@@ -5,13 +5,13 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-19 · by: release integration session · main @ `20f2b0c`
+Last updated: 2026-07-19 · by: dashboard/history/settings session · branch `phase4-dashboard-history-settings`
 
 ## Product
 
 Open, anonymous, low-friction tool: paste a URL → streamed AI-search audit
 (AEO / GEO / Citability / AI Overview scores + evidence-backed findings).
-No account, no signup, no stored data. **Live:**
+No account or signup; optional audit summaries stay only in the browser. **Live:**
 https://seo-ai-audit-pied.vercel.app
 
 ## Current status (one paragraph)
@@ -26,8 +26,10 @@ the whole-site selector and route are live, the bulk endpoint validates bad
 input correctly, and the security headers, robots.txt, and llms.txt are present.
 A real provider key is still required in Vercel for the seven LLM-rubric
 signals; without it the deterministic phase completes and the app degrades
-cleanly. Auth/persistence stays deferred (Phase 5), and the Supabase wipe SQL
-is still awaiting the user.
+cleanly. The dashboard/history/settings phase is implemented on
+`phase4-dashboard-history-settings`, with 230 tests and 16 Playwright journeys
+green, and is ready for coordinator review. Auth/server persistence stays
+deferred (Phase 5), and the Supabase wipe SQL is still awaiting the user.
 
 ## Plan → status
 
@@ -41,15 +43,17 @@ is still awaiting the user.
 | 5 | Coordinator review pass 1 (all three WS + integration) | reviews in `docs/phases/ws*-report.md` | ✅ done |
 | 6 | Provider-flex: `AI_PROVIDER`/`AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` — Anthropic or any OpenAI-compatible endpoint (OpenRouter, zenmuz, Ollama) + WS1-gaps quick fixes (focus state, security headers) | `provider-flex` `3939732` | ✅ merged + deployed |
 | 7 | WS4 crawl + bulk: bulk audit, site crawl, SSRF pinned-IP fix | `ws4-bulk-audit-crawl` `2cc82fe` | ✅ merged + deployed |
-| 8 | Phase 4 report features: export, share, schema output, local history | — | ⏸ parked (`docs/phases/later-phases.md`) |
-| 9 | Phase 5 auth + persistence | restore from `backup/pre-rewrite` | ⏸ **deferred by product decision D-001** |
+| 8 | Phase 4a: dashboard, browser-local history, global settings | `phase4-dashboard-history-settings` | ✅ implemented, ready for review |
+| 9 | Phase 4b: export, share, schema output | — | ⏸ parked (`docs/phases/later-phases.md`) |
+| 10 | Phase 5 auth + persistence | restore from `backup/pre-rewrite` | ⏸ **deferred by product decision D-001** |
 
 ## Pending user actions
 
-1. **AI key in Vercel** — set `ANTHROPIC_API_KEY`, or configure
-   `AI_PROVIDER`+`AI_API_KEY`+`AI_MODEL`[+`AI_BASE_URL`] for a non-Anthropic
-   provider (OpenRouter/zenmuz/Ollama/etc.). Until a key is set, production
-   audits return the fetch/DET phases and error cleanly on the rubric phase.
+1. **AI provider compatibility** — the configured Anthropic-compatible proxy
+   answers ordinary messages but does not honor the AI SDK structured-output
+   request, so production currently errors at the rubric phase. Use a provider
+   with structured output/tool support or implement a validated plain-JSON
+   fallback. Rotate the credential shared during setup.
 2. **Supabase wipe** — run `scripts/db-wipe.sql` in the Supabase SQL editor
    (D-009; all 7 pre-pivot tables verified empty; also staged on branch
    `claude/reset-schema-permissions-wb2yex`).

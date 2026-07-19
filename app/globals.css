@@ -131,3 +131,10 @@ body {
 .wb-skeleton {
   animation: wb-pulse 1.4s var(--ease-in-out) infinite;
 }
+
+html[data-reduced-motion="on"] *,
+html[data-reduced-motion="on"] *::before,
+html[data-reduced-motion="on"] *::after {
+  animation-duration: 0ms !important;
+  transition-duration: 0ms !important;
+}
