@@ -167,3 +167,25 @@ is documented in `.env.example` and `docs/ARCHITECTURE.md`; whole-site design
 and evidence are in `docs/phases/ws4-report.md`. The only blocking product
 configuration is the real provider key. Supabase wipe and stale Vercel env
 cleanup remain user actions; auth/persistence stays deferred by D-001.
+
+## 2026-07-19 · Production verification · main@20f2b0c
+
+DONE: Promoted the tested release to `main`, directly deployed
+`orbix2/seo-ai-audit` to Vercel production as deployment
+`dpl_4E53JVfhCX4xo4iEf1SRV95K7JSR`, and confirmed the canonical alias
+`https://seo-ai-audit-pied.vercel.app`. Live probes verified the landing page
+contains the Whole site mode, `/audit/site` renders for a valid URL,
+`POST /api/audit/bulk` returns the expected 400 `invalid_url` contract for bad
+input, robots.txt and llms.txt are served, and CSP/HSTS/nosniff/frame/referrer
+security headers are active.
+
+NEXT: Configure a real AI provider key in Vercel and run one complete
+LLM-scored production audit. After that release sign-off, choose whether Phase
+4 (export/share/schema/local history) is the next product milestone. The
+Supabase wipe and stale environment-variable cleanup remain optional user
+actions.
+
+CONTEXT: Source and production are aligned at the 2026-07-19 release. The
+release branch `release/provider-ws4` remains on origin as a recoverable
+checkpoint. Provider configuration options are in `.env.example`; do not add
+auth or persistence without revisiting D-001.

@@ -5,7 +5,7 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-19 · by: release integration session · release @ `51ae0b8`
+Last updated: 2026-07-19 · by: release integration session · main @ `20f2b0c`
 
 ## Product
 
@@ -16,16 +16,18 @@ https://seo-ai-audit-pied.vercel.app
 
 ## Current status (one paragraph)
 
-WS1–WS3, provider-flex, and WS4 are **done and integrated on the release
-line**. The product now supports anonymous single-page and whole-site audits,
+WS1–WS3, provider-flex, and WS4 are **done, integrated on `main`, and live in
+production**. The product supports anonymous single-page and whole-site audits,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
 typecheck, 222 unit/integration tests, production build, and 14 Playwright
-journeys. Promotion to `main` and production verification are the remaining
-release actions. A real provider key is still required in Vercel for the seven
-LLM-rubric signals; without it the deterministic phase completes and the app
-degrades cleanly. Auth/persistence stays deferred (Phase 5), and the Supabase
-wipe SQL is still awaiting the user.
+journeys. Production was directly deployed and smoke-tested on 2026-07-19:
+the whole-site selector and route are live, the bulk endpoint validates bad
+input correctly, and the security headers, robots.txt, and llms.txt are present.
+A real provider key is still required in Vercel for the seven LLM-rubric
+signals; without it the deterministic phase completes and the app degrades
+cleanly. Auth/persistence stays deferred (Phase 5), and the Supabase wipe SQL
+is still awaiting the user.
 
 ## Plan → status
 
@@ -37,8 +39,8 @@ wipe SQL is still awaiting the user.
 | 3 | WS3 results UI: dashboard vs DATA-CONTRACT mock | `ws3-results-ui` `b7736dd` | ✅ merged + deployed |
 | 4 | Integration: merges, /audit wiring, dead-file cleanup, e2e, prod deploy | `integrate-v1` → `main` `ac1b7fe` | ✅ done |
 | 5 | Coordinator review pass 1 (all three WS + integration) | reviews in `docs/phases/ws*-report.md` | ✅ done |
-| 6 | Provider-flex: `AI_PROVIDER`/`AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` — Anthropic or any OpenAI-compatible endpoint (OpenRouter, zenmuz, Ollama) + WS1-gaps quick fixes (focus state, security headers) | `provider-flex` `3939732` | ✅ integrated on release line |
-| 7 | WS4 crawl + bulk: bulk audit, site crawl, SSRF pinned-IP fix | `ws4-bulk-audit-crawl` `2cc82fe` | ✅ integrated on release line |
+| 6 | Provider-flex: `AI_PROVIDER`/`AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` — Anthropic or any OpenAI-compatible endpoint (OpenRouter, zenmuz, Ollama) + WS1-gaps quick fixes (focus state, security headers) | `provider-flex` `3939732` | ✅ merged + deployed |
+| 7 | WS4 crawl + bulk: bulk audit, site crawl, SSRF pinned-IP fix | `ws4-bulk-audit-crawl` `2cc82fe` | ✅ merged + deployed |
 | 8 | Phase 4 report features: export, share, schema output, local history | — | ⏸ parked (`docs/phases/later-phases.md`) |
 | 9 | Phase 5 auth + persistence | restore from `backup/pre-rewrite` | ⏸ **deferred by product decision D-001** |
 
