@@ -14,14 +14,15 @@ Open, anonymous-first, low-friction tool: paste a URL → streamed AI-search aud
 No signup is required; audit queries and reports have a Supabase-backed durable
 store with a browser fallback, and optional email-link sign-in enables
 cross-device recovery. **Live:**
-https://seo-ai-audit-pied.vercel.app
+https://seo-ai-audit-orbix2.vercel.app
 
 ## Current status (one paragraph)
 
 The anonymous-first product and durable Supabase storage are live. The
-DataForSEO technical-crawl phase is deployed and awaits provider credentials
-for its live paid-task proof. Phase 5 optional account recovery is implemented;
-its production migration and Auth URLs are configured. The product supports
+DataForSEO technical-crawl phase is configured, deployed, and live-validated
+with a real one-page provider task and cost-ledger entry. Phase 5 optional
+account recovery is implemented; its production migration and Auth URLs are
+configured. The product supports
 single-page and whole-site audits of up to 500 discovered pages,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
@@ -57,16 +58,14 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 8 | Phase 4a: dashboard, browser-local history, global settings | `main` via PR #1 | ✅ merged + deployed |
 | 9 | Phase 4b: export, share, schema output, result OG | `main` via PR #1 | ✅ merged + deployed |
 | 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` `11b879e`+ | ✅ migrated + deployed + validated |
-| 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` `e9a1269` | ✅ implemented + deployed; credentials needed for live provider task |
+| 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` `e9a1269`+ | ✅ configured + deployed + live provider task validated |
 | 12 | Phase 5: optional account auth + cross-device identity | `main` `7b51ac2` | ✅ implemented + migrated + deployed + live data path validated |
 
 ## Pending user actions
 
-1. Add server-only `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` in Vercel for
-   the required low-limit live provider validation.
-2. Configure custom SMTP in Supabase Auth for production email capacity; the
+1. Configure custom SMTP in Supabase Auth for production email capacity; the
    built-in sender is limited to two emails per hour.
-3. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
+2. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
    `ENCRYPTION_KEY` vars from Vercel (WS1 report, open question 1).
 
 ## Key decisions (full log: `docs/DECISIONS.md`)

@@ -15,7 +15,7 @@ workstreams already shipped.
 
 Evidence: `docs/phases/supabase-phase1-report.md`.
 
-## Cloud Phase 2 — DataForSEO technical crawl (implemented; activation pending credentials)
+## Cloud Phase 2 — DataForSEO technical crawl (complete and live-validated)
 
 - Server-only Basic authentication using `DATAFORSEO_LOGIN` and
   `DATAFORSEO_PASSWORD`.
@@ -34,6 +34,10 @@ Evidence: `docs/phases/supabase-phase1-report.md`.
 
 DataForSEO credentials are server-only. The API password is generated in the
 DataForSEO API Access screen and is not the account password.
+
+Production proof: a one-page crawl of `www.orbix.studio` completed on
+2026-07-20, returned HTTP 200 and an on-page score of 97.07, and recorded its
+$0.00015 actual cost in the usage ledger.
 
 ## Phase 5 — account identity and cross-device recovery (implemented and data path validated)
 

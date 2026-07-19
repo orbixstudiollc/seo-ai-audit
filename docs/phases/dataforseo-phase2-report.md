@@ -23,12 +23,18 @@ Date: 2026-07-20
   production Supabase project.
 - Lint, TypeScript, production build, 270 unit/integration tests, and 22
   Playwright journeys pass in the combined release tree.
-- Production route returns the sanitized `provider_unavailable` response when
-  credentials are absent, proving that no paid task can start accidentally.
+- `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` are stored as sensitive,
+  production-only Vercel variables and were activated by deployment
+  `dpl_HzvFEGHxypK9MGnLNEYM6RyEEg1t`.
+- A real one-page production crawl of `www.orbix.studio` completed on
+  2026-07-20. It returned HTTP 200, the live page title, an on-page score of
+  97.07, one normalized page, and a provider cost of $0.00015. The usage
+  ledger recorded the charge.
+- The synthetic audit used to authorize the live proof was deleted after the
+  result was verified; its usage-ledger entry remains as the cost record.
 
-## Activation boundary
+## Activation status
 
-Implementation and deployment are complete. A real provider crawl remains
-intentionally unavailable until `DATAFORSEO_LOGIN` and
-`DATAFORSEO_PASSWORD` are added to Vercel Production. Those credentials are
-the only remaining input for the required low-limit live provider validation.
+Implementation, production configuration, deployment, and live provider
+validation are complete. Credentials remain server-only and are not present
+in source control or client bundles.

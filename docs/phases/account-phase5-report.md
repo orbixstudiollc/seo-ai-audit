@@ -21,9 +21,9 @@ Date: 2026-07-20
 
 - Migration `202607200003_account_workspace_linking.sql` applied to the
   production Supabase project.
-- Supabase Auth Site URL set to
-  `https://seo-ai-audit-pied.vercel.app`.
-- `https://seo-ai-audit-pied.vercel.app/dashboard` added to the redirect
+- Supabase Auth Site URL set to the reachable project alias
+  `https://seo-ai-audit-orbix2.vercel.app`.
+- `https://seo-ai-audit-orbix2.vercel.app/dashboard` added to the redirect
   allowlist.
 
 ## Verification
@@ -57,3 +57,5 @@ Magic-link initiation reaches Supabase correctly. The project currently uses
 the built-in limit of two emails per hour; Supabase disables the email-limit
 control until custom SMTP is configured. Production-grade email delivery is
 therefore an operator configuration prerequisite, not an application-code gap.
+The production dashboard was rechecked on 2026-07-20 and `Enable custom SMTP`
+remains off.

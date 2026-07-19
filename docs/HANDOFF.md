@@ -483,3 +483,24 @@ zero-cost dummy-data validation before switching to the live hostname.
 
 DEPLOYED: Account email error guidance commit `15f8e8b` is production-ready as
 `dpl_CEr8AWNgehmbfsH1PMxgLi2Z1V7E` on the canonical alias.
+
+## 2026-07-20 · DataForSEO production activation · main
+
+DONE: Added the DataForSEO API login and password to Vercel as sensitive,
+production-only variables and redeployed as
+`dpl_HzvFEGHxypK9MGnLNEYM6RyEEg1t`. A real one-page production crawl of
+`www.orbix.studio` completed with HTTP 200, an on-page score of 97.07, one
+normalized page, and an actual provider cost of $0.00015 recorded in the
+usage ledger. Deleted the synthetic audit after validation; its cost ledger
+entry remains intentionally. Cloud Phase 2 is fully activated and validated.
+
+NEXT: Configure custom SMTP in Supabase Auth and send one real magic-link email
+to finish the production-email operator requirement. The reachable public URL
+is now the stable project alias `https://seo-ai-audit-orbix2.vercel.app`;
+`seo-ai-audit-pied.vercel.app` remains attached but routes to an edge pair that
+timed out during validation.
+
+CONTEXT: Supabase Authentication > Emails > SMTP Settings still shows
+`Enable custom SMTP` off. Metadata and Supabase Auth URLs use the reachable
+project alias. The app has no remaining DataForSEO credential or code blocker.
+Do not expose or commit either provider secret.

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://seo-ai-audit-pied.vercel.app";
+const SITE_URL = "https://seo-ai-audit-orbix2.vercel.app";
 const SITE_DESCRIPTION =
   "Paste a URL for an AI-search audit with AEO, GEO, citability, and AI Overview readiness scores. Start without signup; optionally sign in to recover reports across devices.";
 
