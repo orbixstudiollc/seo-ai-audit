@@ -52,7 +52,7 @@ export default function Home() {
         </div>
       </main>
       <footer className="border-t border-line px-6 py-6 text-center font-mono text-xs text-text-3">
-        No accounts. No stored data. Every audit runs fresh.
+        No accounts. Audit summaries are saved only in your browser.
       </footer>
     </>
   );

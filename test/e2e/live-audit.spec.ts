@@ -39,4 +39,10 @@ test("pastes a URL and gets a rendered report from a real audit", async ({ page 
   // ("Run again" only renders in AuditReportView's error banner; Next.js's
   // own route-announcer also has role="alert", so it's not a safe check here.)
   await expect(page.getByRole("button", { name: "Run again" })).toHaveCount(0);
+
+  // Completion is recorded locally and survives navigation to the dashboard.
+  await expect(page.getByText("Saved to your dashboard on this browser.")).toBeVisible();
+  await page.getByRole("link", { name: "View dashboard" }).click();
+  await expect(page.getByRole("heading", { name: "Audit dashboard" })).toBeVisible();
+  await expect(page.getByText("Example Domain", { exact: true })).toBeVisible();
 });

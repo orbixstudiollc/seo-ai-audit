@@ -51,6 +51,24 @@ test("keyboard navigation moves through the findings list", async ({ page }) => 
   await expect(findings.first()).toBeFocused();
 });
 
+test("downloads report exports and copies a stateless share link", async ({ context, page }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/dev/mock-report");
+
+  const markdownDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Markdown" }).click();
+  await expect((await markdownDownload).suggestedFilename()).toMatch(/\.md$/);
+
+  const htmlDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "HTML", exact: true }).click();
+  await expect((await htmlDownload).suggestedFilename()).toMatch(/\.html$/);
+
+  await page.getByRole("button", { name: "Copy share link" }).click();
+  await expect(page.getByText("Share link copied. Opening it runs a fresh audit.")).toBeVisible();
+  const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboard).toContain("/audit?url=https%3A%2F%2Fexample.com");
+});
+
 test("is gated out of production (NODE_ENV !== development)", async ({ page }) => {
   // The e2e webServer always runs `next dev` (see playwright.config.ts), so
   // this only pins the source guard's presence, not a live 404 — a

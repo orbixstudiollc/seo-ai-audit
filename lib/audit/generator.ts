@@ -1,6 +1,6 @@
-import { generateObject, type LanguageModel } from "ai";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
-import { blockNodesToText, SIGNAL_IDS } from "@aeo/scoring";
+import { blockNodesToText, generateValidatedObject, SIGNAL_IDS } from "@aeo/scoring";
 import type { ParsedDocument, ScoreBreakdown, SignalId } from "@aeo/scoring";
 import type { AuditRewrites, RewriteHunk } from "./types";
 
@@ -185,7 +185,7 @@ function toHunks(rewrites: LlmRewrites): RewriteHunk[] {
  * the pipeline, not the temp-0 consistency-critical scoring half.
  */
 export async function generateRewrites(input: GenerateRewritesInput): Promise<AuditRewrites> {
-  const { object } = await generateObject({
+  const { object } = await generateValidatedObject({
     model: input.model,
     schema: rewriteSchema,
     prompt: buildRewritePrompt(input.doc, input.scoreBreakdown),

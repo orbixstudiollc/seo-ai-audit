@@ -19,6 +19,7 @@ import { SignalBreakdown } from "@/app/components/workbench/SignalBreakdown";
 import { ReportHeader, ReportHeaderSkeleton } from "./ReportHeader";
 import { FindingsPanel } from "./FindingsPanel";
 import { RewritesPanel } from "./RewritesPanel";
+import { ReportActions } from "./ReportActions";
 
 type StreamError = { kind: AuditErrorKind; message: string; retryAfter?: number };
 
@@ -130,6 +131,10 @@ export function AuditReportView({ phase, page, signals, scores, findings, rewrit
         <FindingsPanel breakdown={scores} findings={findings} onActivateFinding={handleActivateFinding} />
         <RewritesPanel rewrites={rewrites} />
       </div>
+
+      {page && scores && findings && (
+        <ReportActions report={{ page, scores, findings, rewrites }} />
+      )}
     </div>
   );
 }

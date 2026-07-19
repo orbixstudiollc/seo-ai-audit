@@ -33,4 +33,5 @@ export { LENS_WEIGHTS, computeLensScore, applyHardCaps } from "./weights";
 export { RUBRIC_VERSION } from "./rubricPrompt";
 export { runAudit, SIGNALS_VERSION } from "./pipeline";
 export type { RunAuditInput } from "./pipeline";
+export { generateValidatedObject, isStructuredOutputCapabilityError } from "./generateValidatedObject";
 export { cacheKey } from "./cache";

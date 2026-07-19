@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { Button } from "./ui/Button";
 
 type AuditMode = "single" | "site";
@@ -37,6 +38,11 @@ export function AuditUrlForm() {
   const [mode, setMode] = useState<AuditMode>("single");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { settings, ready } = useLocalSettings();
+
+  useEffect(() => {
+    if (ready) queueMicrotask(() => setMode(settings.defaultAuditMode));
+  }, [ready, settings.defaultAuditMode]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -7,15 +7,17 @@ Status: **target architecture** for the v1 rebuild. Owner: coordinator session
 
 An open, anonymous, low-friction tool: paste a URL on the landing page, get a
 streamed AI-search audit (0–100 lens scores + evidence-backed findings) back.
-No account, no signup, no stored data.
+No account or signup. Audit summaries and preferences may be stored locally in
+the browser; nothing is persisted server-side.
 
 ## Hard constraints (do not violate in any workstream)
 
 1. **No auth.** No better-auth, no sessions, no cookies that identify users.
    Auth is Phase 5, a separate future phase (restore point:
    `backup/pre-rewrite`).
-2. **No database.** v1 is stateless. No drizzle, no postgres, no Supabase
-   client. Nothing is persisted server-side; the client holds the report.
+2. **No database.** v1 is server-stateless. No drizzle, no postgres, no
+   Supabase client. The client may keep versioned, compact audit summaries and
+   preferences in localStorage; full reports and credentials are never stored.
 3. **Server-side LLM key.** Audits run on a key the *operator* configures in
    the server env (Vercel) — never a per-user/BYOK key (that's gone with the
    auth teardown). The operator may point that key at Anthropic direct, an
@@ -53,7 +55,8 @@ Browser                          Vercel (Next.js 16, App Router)
 ```
 
 Data flows one way: URL in → SSE events out → client-side state → rendered
-report. Refresh = re-run. Share = the URL itself (`/audit?url=…`).
+report. Completed summaries may be added to browser-local history. Share = the
+URL itself (`/audit?url=…`).
 
 ## Repository map (what exists, who owns what)
 
