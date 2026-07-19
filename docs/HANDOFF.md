@@ -363,3 +363,23 @@ NEXT: No release work remains for browser history retention.
 CONTEXT: This changes dashboard history retention only. The separate whole-site
 audit crawler remains capped at 50 pages per run for provider-cost, timeout, and
 anonymous abuse-control safety.
+
+## 2026-07-19 · 500-page whole-site discovery cap · main
+
+DONE: Raised whole-site audit discovery from default 30 / hard max 50 to a
+default and hard maximum of 500 pages. Updated request validation, landing-page
+copy, contract documentation, safety comments, and the hard-cap regression
+test. Direct verification through the application discovery pipeline against
+`www.orbix.studio` now returns all 200 sitemap URLs with `truncated: false`;
+the site has 200 unique sitemap URLs and all returned HTTP 200 during the
+pre-release check. Lint/typecheck/build PASS, 241/241 tests, 20/20 Playwright
+journeys. Commit `a136842`; production deployment
+`dpl_9iLhuU2QLks5ZLHRgeaoJ2p4QqZu` is READY on the canonical alias.
+
+NEXT: Monitor real bulk runs for provider failures. The 240-second wall-clock
+budget and partial-result reporting remain intentionally active.
+
+CONTEXT: Discovery coverage and AI completion are separate. Production logs
+from the earlier Orbix run showed rubric/rewrite provider errors; raising the
+page cap includes all URLs but does not remove upstream provider limits or the
+serverless wall-clock ceiling.
