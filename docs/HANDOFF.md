@@ -254,3 +254,19 @@ CONTEXT: Production is https://seo-ai-audit-pied.vercel.app. Local release
 gates remain lint/typecheck/build, 236 tests, and 17 Playwright journeys. The
 deployed source is the content merged by PR #1; deployment inspector:
 https://vercel.com/orbix2/seo-ai-audit/9PsFRbmgcv3hvTCHei28ZnmVnZKD.
+
+## 2026-07-19 · All-query dashboard history · main
+
+DONE: Upgraded browser-local history to v2 so every submitted single-page and
+whole-site query is saved immediately, then updated in place through started,
+failed, partial, or complete status. Existing v1 history migrates without data
+loss. Scoreless failures remain visible and rerunnable; score sorting keeps
+unscored queries after scored results. Clear-history removes both schema keys,
+and Settings copy now accurately describes all-query capture. Gates:
+lint/typecheck/build PASS, 237/237 tests, 18/18 Playwright journeys.
+
+NEXT: Deploy and verify a failed/no-score query appears on the live dashboard.
+
+CONTEXT: Current key `seo-ai-audit:history:v2`; legacy key is read only when v2
+is absent. Query records remain compact and privacy-safe—no page content,
+reports, provider responses, headers, or credentials are stored.

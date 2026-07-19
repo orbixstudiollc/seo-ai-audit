@@ -1,11 +1,12 @@
 import type { Lens } from "@aeo/scoring";
 
-export const HISTORY_KEY = "seo-ai-audit:history:v1";
+export const HISTORY_KEY = "seo-ai-audit:history:v2";
+export const LEGACY_HISTORY_KEY = "seo-ai-audit:history:v1";
 export const HISTORY_CHANGED_EVENT = "seo-ai-audit:history-changed";
-export const HISTORY_VERSION = 1;
+export const HISTORY_VERSION = 2;
 
 export type AuditHistoryMode = "single" | "site";
-export type AuditHistoryStatus = "complete" | "partial";
+export type AuditHistoryStatus = "started" | "complete" | "partial" | "failed";
 
 export interface AuditHistoryRecord {
   id: string;
@@ -45,7 +46,7 @@ export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
     typeof value.url === "string" &&
     typeof value.title === "string" &&
     (value.mode === "single" || value.mode === "site") &&
-    (value.status === "complete" || value.status === "partial") &&
+    (value.status === "started" || value.status === "complete" || value.status === "partial" || value.status === "failed") &&
     typeof value.createdAt === "string" &&
     !Number.isNaN(Date.parse(value.createdAt)) &&
     (value.scores === null || isScores(value.scores)) &&
@@ -56,11 +57,20 @@ export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
 
 export function loadHistory(storage: Pick<Storage, "getItem">): AuditHistoryRecord[] {
   try {
-    const raw = storage.getItem(HISTORY_KEY);
+    const current = storage.getItem(HISTORY_KEY);
+    if (current) {
+      const parsed: unknown = JSON.parse(current);
+      return Array.isArray(parsed) ? parsed.filter(isHistoryRecord) : [];
+    }
+    const raw = storage.getItem(LEGACY_HISTORY_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isHistoryRecord);
+    return parsed.flatMap((value): AuditHistoryRecord[] => {
+      if (!isRecord(value) || value.version !== 1) return [];
+      const migrated = { ...value, version: HISTORY_VERSION };
+      return isHistoryRecord(migrated) ? [migrated] : [];
+    });
   } catch {
     return [];
   }
@@ -102,8 +112,11 @@ export function filterAndSortHistory(records: AuditHistoryRecord[], filters: His
   return [...filtered].sort((a, b) => {
     if (sort === "oldest") return Date.parse(a.createdAt) - Date.parse(b.createdAt);
     if (sort === "highest" || sort === "lowest") {
-      const aScore = averageScore(a) ?? -1;
-      const bScore = averageScore(b) ?? -1;
+      const aScore = averageScore(a);
+      const bScore = averageScore(b);
+      if (aScore === null && bScore === null) return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+      if (aScore === null) return 1;
+      if (bScore === null) return -1;
       return sort === "highest" ? bScore - aScore : aScore - bScore;
     }
     return Date.parse(b.createdAt) - Date.parse(a.createdAt);
@@ -117,4 +130,3 @@ export function createHistoryId(mode: AuditHistoryMode, url: string, createdAt: 
 export function notifyHistoryChanged(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT));
 }
-

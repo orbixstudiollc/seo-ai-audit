@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSiteAuditStream } from "@/app/hooks/useSiteAuditStream";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
-import { addHistoryRecord, createHistoryId, loadHistory, notifyHistoryChanged, storeHistory } from "@/lib/history";
+import { addHistoryRecord, createHistoryId, loadHistory, notifyHistoryChanged, storeHistory, type AuditHistoryRecord } from "@/lib/history";
 import { SiteAuditReportView } from "./SiteAuditReportView";
 import { SavedAuditActions } from "./SavedAuditActions";
 
@@ -15,24 +15,31 @@ type Props = {
 export function SiteAuditRunner({ url }: Props) {
   const stream = useSiteAuditStream(url);
   const { settings, ready } = useLocalSettings();
-  const savedIdRef = useRef<string | null>(null);
+  const [historyRun] = useState(() => {
+    const createdAt = new Date().toISOString();
+    return { createdAt, id: createHistoryId("site", url, createdAt) };
+  });
+  const lastRecordRef = useRef("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const canSave = stream.phase === "done" || (stream.phase === "error" && stream.rollup !== null);
-    if (!ready || !settings.autoSaveAudits || !canSave || !stream.rollup) return;
-    const createdAt = new Date().toISOString();
-    const id = createHistoryId("site", url, createdAt);
-    if (savedIdRef.current) return;
+    if (!ready || !settings.autoSaveAudits) return;
     try {
-      const next = addHistoryRecord(loadHistory(window.localStorage), {
-        id, version: 1, url, title: new URL(url).hostname, mode: "site", createdAt,
-        status: stream.phase === "done" && !stream.stoppedEarly ? "complete" : "partial",
-        scores: stream.rollup.avgScores, pageCount: stream.rollup.pagesAudited,
-      }, settings.historyLimit);
-      storeHistory(window.localStorage, next); notifyHistoryChanged(); savedIdRef.current = id; queueMicrotask(() => setSaved(true));
+      const status = stream.phase === "done"
+        ? (stream.stoppedEarly ? "partial" : "complete")
+        : stream.phase === "error" ? (stream.rollup ? "partial" : "failed") : "started";
+      const record: AuditHistoryRecord = {
+        id: historyRun.id, version: 2, url, title: new URL(url).hostname,
+        mode: "site" as const, createdAt: historyRun.createdAt, status,
+        scores: stream.rollup?.avgScores ?? null, pageCount: stream.rollup?.pagesAudited,
+      };
+      const serialized = JSON.stringify(record);
+      if (serialized === lastRecordRef.current) return;
+      const next = addHistoryRecord(loadHistory(window.localStorage), record, settings.historyLimit);
+      storeHistory(window.localStorage, next); notifyHistoryChanged(); lastRecordRef.current = serialized;
+      if (stream.phase === "done" || stream.phase === "error") queueMicrotask(() => setSaved(true));
     } catch { /* Audit display must never fail because storage is unavailable. */ }
-  }, [ready, settings, stream.phase, stream.rollup, stream.stoppedEarly, url]);
+  }, [historyRun, ready, settings, stream.phase, stream.rollup, stream.stoppedEarly, url]);
 
   return (
     <>

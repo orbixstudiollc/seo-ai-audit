@@ -21,3 +21,18 @@ test("settings stays available and changes the default audit mode", async ({ pag
   await page.getByLabel("Main navigation").getByRole("link", { name: "New audit" }).click();
   await expect(page.getByRole("radio", { name: "Whole site" })).toHaveAttribute("aria-checked", "true");
 });
+
+test("stores a failed query even when no scores were produced", async ({ page }) => {
+  await page.route("/api/audit", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"type":"error","kind":"fetch_failed","message":"Fixture fetch failed."}\n\n',
+    });
+  });
+  await page.goto("/audit?url=https%3A%2F%2Ffailed.example%2Farticle");
+  await expect(page.getByRole("status")).toContainText("Saved to your dashboard");
+  await page.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await expect(page.getByText("failed.example", { exact: false })).toBeVisible();
+  await expect(page.getByText("failed", { exact: true })).toBeVisible();
+});

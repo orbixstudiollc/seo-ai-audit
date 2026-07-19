@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LENS_META, LENS_ORDER } from "@/lib/audit/signalMeta";
 import { scoreBand } from "@/lib/audit/scoreScale";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
-import { HISTORY_CHANGED_EVENT, HISTORY_KEY, filterAndSortHistory, loadHistory, removeHistoryRecord, storeHistory, type AuditHistoryRecord } from "@/lib/history";
+import { HISTORY_CHANGED_EVENT, HISTORY_KEY, LEGACY_HISTORY_KEY, filterAndSortHistory, loadHistory, removeHistoryRecord, storeHistory, type AuditHistoryRecord } from "@/lib/history";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 
@@ -25,11 +25,11 @@ export function DashboardClient() {
 
   const visible = useMemo(() => filterAndSortHistory(records, { query, mode, sort }), [records, query, mode, sort]);
   function persist(next: AuditHistoryRecord[]) { storeHistory(window.localStorage, next); setRecords(next); window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT)); }
-  function clearAll() { if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from this browser?")) return; window.localStorage.removeItem(HISTORY_KEY); setRecords([]); window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT)); }
+  function clearAll() { if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from this browser?")) return; window.localStorage.removeItem(HISTORY_KEY); window.localStorage.removeItem(LEGACY_HISTORY_KEY); setRecords([]); window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT)); }
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.16em] text-text-3">Local workspace</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Audit dashboard</h1><p className="mt-2 max-w-xl text-sm text-text-2">Your recent blog and site audits, stored only in this browser.</p></div><Link href="/" className="inline-flex h-9 items-center bg-text-1 px-4 font-mono text-xs font-medium uppercase tracking-wider text-surface-1 hover:bg-accent-ink">New audit</Link></div>
+      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.16em] text-text-3">Local workspace</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Audit dashboard</h1><p className="mt-2 max-w-xl text-sm text-text-2">Every audit query you run, stored only in this browser.</p></div><Link href="/" className="inline-flex h-9 items-center bg-text-1 px-4 font-mono text-xs font-medium uppercase tracking-wider text-surface-1 hover:bg-accent-ink">New audit</Link></div>
 
       <Card label={`History (${records.length})`} aside={records.length > 0 ? <Button size="sm" variant="ghost" onClick={clearAll}>Clear history</Button> : undefined}>
         {records.length > 0 && <div className="grid gap-3 border-b border-line p-3 sm:grid-cols-3"><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Search<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Title or domain" className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1" /></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Type<select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1"><option value="all">All</option><option value="single">Single page</option><option value="site">Whole site</option></select></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Sort<select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest score</option><option value="lowest">Lowest score</option></select></label></div>}
