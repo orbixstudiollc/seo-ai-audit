@@ -1,11 +1,12 @@
 export const SETTINGS_KEY = "seo-ai-audit:settings:v1";
 export const SETTINGS_CHANGED_EVENT = "seo-ai-audit:settings-changed";
 export const SETTINGS_VERSION = 1;
+export type HistoryLimit = 10 | 25 | 50 | 100 | 250 | 500;
 
 export interface AppSettings {
   version: typeof SETTINGS_VERSION;
   defaultAuditMode: "single" | "site";
-  historyLimit: 10 | 25 | 50;
+  historyLimit: HistoryLimit;
   confirmBeforeClear: boolean;
   autoSaveAudits: boolean;
   reducedMotion: "system" | "on" | "off";
@@ -26,7 +27,7 @@ export function isAppSettings(value: unknown): value is AppSettings {
   return (
     item.version === SETTINGS_VERSION &&
     (item.defaultAuditMode === "single" || item.defaultAuditMode === "site") &&
-    (item.historyLimit === 10 || item.historyLimit === 25 || item.historyLimit === 50) &&
+    (item.historyLimit === 10 || item.historyLimit === 25 || item.historyLimit === 50 || item.historyLimit === 100 || item.historyLimit === 250 || item.historyLimit === 500) &&
     typeof item.confirmBeforeClear === "boolean" &&
     typeof item.autoSaveAudits === "boolean" &&
     (item.reducedMotion === "system" || item.reducedMotion === "on" || item.reducedMotion === "off")
@@ -51,4 +52,3 @@ export function storeSettings(storage: Pick<Storage, "setItem">, settings: AppSe
 export function notifySettingsChanged(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
 }
-

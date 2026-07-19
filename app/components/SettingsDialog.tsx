@@ -5,6 +5,7 @@ import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 import { HISTORY_CHANGED_EVENT, HISTORY_KEY, LEGACY_HISTORY_KEY, LEGACY_HISTORY_V2_KEY, LEGACY_HISTORY_V1_KEY } from "@/lib/history";
 import { clearAuditReports } from "@/lib/reports";
+import type { HistoryLimit } from "@/lib/settings";
 import { Button } from "./ui/Button";
 
 type Props = { open: boolean; onClose: () => void; triggerRef: React.RefObject<HTMLButtonElement | null> };
@@ -68,10 +69,13 @@ export function SettingsDialog({ open, onClose, triggerRef }: Props) {
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="font-medium">History limit</span>
-            <select className="h-10 border border-line-strong bg-surface-1 px-3" value={settings.historyLimit} onChange={(e) => setSettings({ ...settings, historyLimit: Number(e.target.value) as 10 | 25 | 50 })}>
+            <select className="h-10 border border-line-strong bg-surface-1 px-3" value={settings.historyLimit} onChange={(e) => setSettings({ ...settings, historyLimit: Number(e.target.value) as HistoryLimit })}>
               <option value="10">10 audits</option>
               <option value="25">25 audits</option>
               <option value="50">50 audits</option>
+              <option value="100">100 audits</option>
+              <option value="250">250 audits</option>
+              <option value="500">500 audits</option>
             </select>
           </label>
           <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={settings.autoSaveAudits} onChange={(e) => setSettings({ ...settings, autoSaveAudits: e.target.checked })} /><span><strong className="block">Save every audit query</strong><span className="text-text-2">Stores query history and reopenable reports only in this browser.</span></span></label>

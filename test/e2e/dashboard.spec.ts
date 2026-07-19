@@ -24,6 +24,30 @@ test("audit detail cards remain responsive at 320px", async ({ page }) => {
   expect(width.scroll).toBeLessThanOrEqual(width.client + 1);
 });
 
+test("paginates history ten audits at a time", async ({ page }) => {
+  await page.addInitScript(() => {
+    const records = Array.from({ length: 12 }, (_, index) => ({
+      id: `single:page-${index + 1}`,
+      version: 4,
+      url: `https://example.com/page-${index + 1}`,
+      title: `Audit page ${index + 1}`,
+      mode: "single",
+      createdAt: new Date(Date.UTC(2026, 6, 19, 10, index)).toISOString(),
+      status: "complete",
+      scores: { aeo: 80, geo: 70, citability: 60, aiOverview: 50 },
+    }));
+    localStorage.setItem("seo-ai-audit:history:v4", JSON.stringify(records));
+  });
+  await page.goto("/dashboard");
+  await expect(page.getByRole("navigation", { name: "History pagination" })).toBeVisible();
+  await expect(page.getByText("Showing 1–10 of 12", { exact: true })).toBeVisible();
+  await expect(page.getByText("Audit page 1", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText("Page 2 of 2", { exact: true })).toBeVisible();
+  await expect(page.getByText("Audit page 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Showing 11–12 of 12", { exact: true })).toBeVisible();
+});
+
 test("settings stays available and changes the default audit mode", async ({ page }) => {
   await page.goto("/dashboard");
   await page.getByRole("button", { name: "Settings" }).click();

@@ -12,7 +12,8 @@
 - Persistent global header with New audit, Dashboard, and Settings on every route.
 - `/dashboard` with browser-local audit history, search, mode filter, score/date sorting, rerun/open/remove actions, empty/no-results states, and responsive cards.
 - Dedicated read-only `/report/[id]` views for reopening saved single-page and whole-site reports later.
-- Versioned history module in `lib/history/`: validation, corrupt-data recovery, same-tab change events, duplicate protection, and configurable 10/25/50 record caps.
+- Versioned history module in `lib/history/`: validation, corrupt-data recovery, same-tab change events, duplicate protection, and configurable limits up to 500 audit records.
+- Client-side dashboard pagination renders 10 audit cards at a time, with filtered-result counts and previous/next controls.
 - Single-page and whole-site completion integration. Whole-site audits save one rollup record, never one record per crawled page. Meaningfully partial scored results are retained.
 - Versioned settings module and accessible settings drawer: default audit mode, history limit, autosave, clear confirmation, reduced motion, reset, and clear history.
 - Post-audit confirmation with Dashboard and Run another audit actions.
@@ -56,10 +57,10 @@ pnpm lint       PASS
 pnpm typecheck  PASS
 pnpm test       PASS — 29 files, 240 tests
 pnpm build      PASS — /dashboard static; /report/[id] dynamic
-pnpm e2e        PASS — 19 Chromium journeys
+pnpm e2e        PASS — 20 Chromium journeys
 ```
 
-E2E covers persistent dashboard records, removal/empty state, global Settings, default-mode persistence, single-audit autosave and reopen, whole-site single-record autosave and reopen, keyboard focus return, existing responsive report checks, and axe checks.
+E2E covers persistent and paginated dashboard records, removal/empty state, global Settings, default-mode persistence, single-audit autosave and reopen, whole-site single-record autosave and reopen, keyboard focus return, existing responsive report checks, and axe checks.
 
 ## Remaining risks / follow-up
 
