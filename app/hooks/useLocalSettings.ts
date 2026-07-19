@@ -10,6 +10,7 @@ import {
   type AppSettings,
 } from "@/lib/settings";
 import { loadCloudSettings, saveCloudSettings } from "@/lib/cloud/settings";
+import { ACCOUNT_OWNER_CHANGED_EVENT } from "@/lib/auth/events";
 
 export function useLocalSettings() {
   const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -17,9 +18,7 @@ export function useLocalSettings() {
 
   useEffect(() => {
     const sync = () => setSettingsState(loadSettings(window.localStorage));
-    queueMicrotask(() => {
-      sync();
-      setReady(true);
+    const syncCloud = () => {
       void loadCloudSettings().then((result) => {
         if (result.state === "found") {
           storeSettings(window.localStorage, result.settings);
@@ -29,12 +28,19 @@ export function useLocalSettings() {
           void saveCloudSettings(loadSettings(window.localStorage));
         }
       });
+    };
+    queueMicrotask(() => {
+      sync();
+      setReady(true);
+      syncCloud();
     });
     window.addEventListener(SETTINGS_CHANGED_EVENT, sync);
     window.addEventListener("storage", sync);
+    window.addEventListener(ACCOUNT_OWNER_CHANGED_EVENT, syncCloud);
     return () => {
       window.removeEventListener(SETTINGS_CHANGED_EVENT, sync);
       window.removeEventListener("storage", sync);
+      window.removeEventListener(ACCOUNT_OWNER_CHANGED_EVENT, syncCloud);
     };
   }, []);
 

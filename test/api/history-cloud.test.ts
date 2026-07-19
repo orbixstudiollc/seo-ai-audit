@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({ from: vi.fn() }));
 
 vi.mock("@/lib/cloud/server", () => ({
   cloudHistoryConfigured: () => true,
-  ownerHashFromRequest: () => "owner-hash",
+  resolveOwnerHashFromRequest: async () => "owner-hash",
   getSupabaseAdmin: () => ({ from: mocks.from }),
 }));
 
@@ -74,4 +74,3 @@ describe("configured cloud history route", () => {
     expect(chain.eq).toHaveBeenCalledWith("owner_hash", "owner-hash");
   });
 });
-

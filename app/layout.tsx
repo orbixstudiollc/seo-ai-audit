@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeader } from "./components/AppHeader";
+import { AccountProvider } from "./components/account/AccountProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 
 const SITE_URL = "https://seo-ai-audit-pied.vercel.app";
 const SITE_DESCRIPTION =
-  "Paste a URL, get a free AI-search audit: AEO, GEO, citability, and AI Overview readiness scores with evidence-backed findings. No account, no signup.";
+  "Paste a URL for an AI-search audit with AEO, GEO, citability, and AI Overview readiness scores. Start without signup; optionally sign in to recover reports across devices.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -49,8 +50,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AppHeader />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <AccountProvider>
+          <AppHeader />
+          <div className="flex flex-1 flex-col">{children}</div>
+        </AccountProvider>
       </body>
     </html>
   );

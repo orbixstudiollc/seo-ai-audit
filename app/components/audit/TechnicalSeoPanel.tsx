@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CLOUD_OWNER_HEADER, getCloudOwnerToken } from "@/lib/cloud/owner";
+import { cloudFetch } from "@/lib/cloud/request";
 import type { TechnicalAuditTask } from "@/lib/dataforseo";
 import { Button } from "@/app/components/ui/Button";
 import { Card } from "@/app/components/ui/Card";
@@ -18,13 +18,6 @@ function labelIssue(key: string): string {
   return key.replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
 }
 
-function requestHeaders(): HeadersInit {
-  return {
-    "Content-Type": "application/json",
-    [CLOUD_OWNER_HEADER]: getCloudOwnerToken(window.localStorage),
-  };
-}
-
 export function TechnicalSeoPanel({ auditId, rootUrl, limit = 500 }: Props) {
   const [task, setTask] = useState<TechnicalAuditTask | null>(null);
   const [ready, setReady] = useState(false);
@@ -35,10 +28,8 @@ export function TechnicalSeoPanel({ auditId, rootUrl, limit = 500 }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch(`/api/technical-audit?auditId=${encodeURIComponent(auditId)}`, {
+      const response = await cloudFetch(`/api/technical-audit?auditId=${encodeURIComponent(auditId)}`, {
         method: "GET",
-        headers: requestHeaders(),
-        cache: "no-store",
       });
       const body = await response.json() as { task?: TechnicalAuditTask; configured?: boolean; error?: string };
       if (response.status === 404) {
@@ -77,9 +68,8 @@ export function TechnicalSeoPanel({ auditId, rootUrl, limit = 500 }: Props) {
   const start = async () => {
     setBusy(true); setError(null);
     try {
-      const response = await fetch("/api/technical-audit", {
+      const response = await cloudFetch("/api/technical-audit", {
         method: "POST",
-        headers: requestHeaders(),
         body: JSON.stringify({ auditId, url: rootUrl, limit: Math.max(1, Math.min(500, Math.floor(limit))) }),
       });
       const body = await response.json() as { task?: TechnicalAuditTask; error?: string };

@@ -36,7 +36,7 @@ export default function Home() {
             Paste a URL. Get an AI-search audit.
           </h1>
           <p className="max-w-lg text-balance text-base text-text-2 sm:text-lg">
-            Free, instant, no signup. See how ready any page is to be cited by ChatGPT, Perplexity, and
+            Start without signup. See how ready any page is to be cited by ChatGPT, Perplexity, and
             AI Overviews — with evidence-backed findings, not guesses.
           </p>
           <AuditUrlForm />
@@ -52,7 +52,7 @@ export default function Home() {
         </div>
       </main>
       <footer className="border-t border-line px-6 py-6 text-center font-mono text-xs text-text-3">
-        No accounts. Audit history and reopenable reports are saved to a private cloud workspace with an offline browser copy.
+        Audits work without an account. Sign in only when you want to recover your private workspace across devices.
       </footer>
     </>
   );

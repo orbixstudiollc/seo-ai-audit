@@ -1,13 +1,14 @@
 # SEO AI Audit
 
-**Anonymous v1 feature build complete.** An open, anonymous, low-friction
-audit tool: paste a URL, get AI-search audit results back. No account, no
-signup, no stored data.
+An open, low-friction audit tool: paste a URL and get AI-search audit results
+back without signing up. Audit history and reports are saved to a private
+cloud workspace; optional email-link sign-in makes that workspace recoverable
+across devices.
 
 The previous iteration (a self-hosted BYOK dashboard with auth + Postgres) is
 preserved in full at branch `backup/pre-rewrite` / tag `backup-pre-rewrite`.
-Auth and persistence are deferred to a later phase by explicit product
-decision.
+The anonymous-first rewrite is preserved, while later cloud phases add durable
+Supabase storage, opt-in DataForSEO crawling, and optional account recovery.
 
 ## What survives from the previous iteration
 

@@ -15,7 +15,7 @@ workstreams already shipped.
 
 Evidence: `docs/phases/supabase-phase1-report.md`.
 
-## Cloud Phase 2 — DataForSEO technical crawl (in progress)
+## Cloud Phase 2 — DataForSEO technical crawl (implemented; activation pending credentials)
 
 - Server-only Basic authentication using `DATAFORSEO_LOGIN` and
   `DATAFORSEO_PASSWORD`.
@@ -35,12 +35,13 @@ Evidence: `docs/phases/supabase-phase1-report.md`.
 DataForSEO credentials are server-only. The API password is generated in the
 DataForSEO API Access screen and is not the account password.
 
-## Phase 5 — account identity and cross-device recovery (next)
+## Phase 5 — account identity and cross-device recovery (in progress)
 
 - Supabase Auth with an email-link flow; anonymous auditing remains available.
 - Link the current anonymous workspace to the signed-in user without losing
   existing history, reports, provider tasks, settings, or usage records.
-- User-owned RLS policies and server-side ownership checks.
+- Verified bearer sessions and server-side ownership checks; audit tables stay
+  inaccessible to browser roles under server-only RLS.
 - Cross-device dashboard/report/settings access after sign-in.
 - Sign-out returns the browser to a fresh anonymous workspace without exposing
   another account's records.

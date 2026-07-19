@@ -94,7 +94,7 @@ export function SettingsDialog({ open, onClose, triggerRef }: Props) {
           <Button size="sm" onClick={() => setSettings(DEFAULT_SETTINGS)}>Reset settings</Button>
           <Button size="sm" onClick={clearHistory}>Clear history</Button>
         </div>
-        <p className="mt-5 text-xs leading-relaxed text-text-3">Audit history is linked to a private device identifier. Clearing browser data removes the offline copy and the identifier needed to reopen its cloud history. Account synchronization is not enabled yet.</p>
+        <p className="mt-5 text-xs leading-relaxed text-text-3">Without an account, audit history is linked to a private device identifier. After sign-in, the current workspace is attached to the verified account for cross-device recovery.</p>
       </div>
     </div>
   );

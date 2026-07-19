@@ -55,3 +55,9 @@ propose; the coordinator records.
   reports with a 500-page cap, conservative cost settings, durable task state,
   and an actual-cost ledger. Phase 5 then adds account identity and
   cross-device recovery while preserving anonymous auditing.
+- **D-013** 2026-07-20 — **Account recovery stays server-owned and optional.**
+  Supabase Auth email links verify identity, but browser roles retain no table
+  access. Next.js verifies bearer tokens with Supabase, derives an opaque
+  account owner hash, and uses one restricted `security definer` RPC to claim
+  an anonymous device workspace atomically. Signing out returns requests to
+  device ownership; auditing never requires registration.

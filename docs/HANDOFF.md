@@ -438,3 +438,23 @@ CONTEXT: Production is https://seo-ai-audit-pied.vercel.app. Supabase public
 table access remains denied by RLS; persistence is available only through the
 server routes and ownership-token hash. Keep the rotated Supabase secret in
 Vercel only and never expose it to client code or source control.
+
+## 2026-07-20 · Cloud Phase 2 + Phase 5 completion pass · main working tree
+
+DONE: DataForSEO technical crawl implementation is deployed with a hard
+500-page cap, cost visibility, durable idempotent tasks, actual-cost ledger,
+and saved-report pagination. Optional Supabase email-link account recovery is
+implemented. The account migration and its rollback-only five-table ownership
+test passed in production; Auth Site URL and dashboard redirect allowlist are
+configured. Combined gates pass: lint, typecheck, production build, 267 tests,
+and 22 Playwright journeys. Reports:
+`docs/phases/dataforseo-phase2-report.md` and
+`docs/phases/account-phase5-report.md`.
+
+NEXT: Commit, deploy, and validate the Phase 5 UI/API in production. Final
+provider proof requires `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD`; final
+cross-device proof requires a user-supplied email address for the magic link.
+
+CONTEXT: Do not send an unsolicited authentication email or invent provider
+credentials. The database and UI work can ship independently; keep the overall
+“complete all phases” goal active until both live proofs are performed.

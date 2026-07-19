@@ -1,4 +1,4 @@
-# Architecture — SEO AI Audit v1 (anonymous)
+# Architecture — SEO AI Audit v1 (anonymous-first)
 
 Status: **current architecture**. Last updated: 2026-07-20.
 
@@ -6,21 +6,25 @@ Status: **current architecture**. Last updated: 2026-07-20.
 
 An open, anonymous, low-friction tool: paste a URL on the landing page, get a
 streamed AI-search audit (0–100 lens scores + evidence-backed findings) back.
-No account or signup. Audit history, reopenable reports, and preferences are
-persisted through server-only Supabase routes and cached locally for offline
-fallback.
+Audits require no account. Audit history, reopenable reports, and preferences
+are persisted through server-only Supabase routes and cached locally for
+offline fallback. Optional Supabase email-link sign-in attaches the anonymous
+workspace to a verified account for cross-device recovery.
 
 ## Hard constraints (do not violate in any workstream)
 
-1. **No auth.** No better-auth, no sessions, no cookies that identify users.
-   Auth is Phase 5, a separate future phase (restore point:
-   `backup/pre-rewrite`).
-2. **Anonymous cloud persistence (Phase 1, D-011).** Supabase stores audit
+1. **Anonymous-first auth.** Auditing must stay available without registration.
+   Optional Supabase Auth email links provide cross-device recovery; the
+   pre-rewrite better-auth implementation stays archived at
+   `backup/pre-rewrite` and is not restored.
+2. **Private cloud persistence (Phase 1 + Phase 5, D-011/D-012).** Supabase stores audit
    summaries, reopenable reports, and preferences. Browser clients never access
    the audit tables directly: RLS is enabled with no public policies, and a
    server route hashes a random per-device ownership token before using the
-   server-only Supabase secret. localStorage/IndexedDB remain an offline cache
-   and migration source. Credentials are never stored in an audit record.
+   server-only Supabase secret. A verified bearer session switches ownership
+   to a hash of the Supabase user id and atomically claims the device workspace.
+   localStorage/IndexedDB remain an offline cache and migration source.
+   Credentials are never stored in an audit record.
 3. **Server-side LLM key.** Audits run on a key the *operator* configures in
    the server env (Vercel) — never a per-user/BYOK key (that's gone with the
    auth teardown). The operator may point that key at Anthropic direct, an
@@ -57,9 +61,13 @@ Browser                          Vercel (Next.js 16, App Router)
                                    └─ SSE stream of AuditStreamEvent frames
 
 Dashboard/report storage ─────►  /api/history + /api/settings
-                                   ├─ validate device ownership token
-                                   ├─ SHA-256 token → opaque owner hash
+                                   ├─ verify optional Supabase bearer session
+                                   ├─ account id or device token → owner hash
                                    └─ server-only Supabase client → RLS tables
+
+Optional account recovery ────►  /api/account/link
+                                   ├─ verify account + device ownership
+                                   └─ atomic workspace claim RPC
 ```
 
 Audit results still stream one way: URL in → SSE events out → client-side state
@@ -142,8 +150,6 @@ before — see docs/DECISIONS.md D-007).
 
 ## Known deferred items
 
-- Account auth and cross-device identity — anonymous device ownership ships in
-  Phase 1, while account linking remains deferred.
 - Headless-browser rendering for JS-heavy pages (flag "may be incomplete"
   instead, as the content extractor does today).
 - Per-user BYOK keys (multi-provider *server*-key config exists — see "AI

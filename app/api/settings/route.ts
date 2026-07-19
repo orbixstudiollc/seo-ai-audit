@@ -1,5 +1,5 @@
 import { isAppSettings } from "@/lib/settings";
-import { cloudHistoryConfigured, getSupabaseAdmin, ownerHashFromRequest } from "@/lib/cloud/server";
+import { cloudHistoryConfigured, getSupabaseAdmin, resolveOwnerHashFromRequest } from "@/lib/cloud/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,14 +8,14 @@ function json(status: number, body: unknown): Response {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-function requestOwner(request: Request): string | Response {
+async function requestOwner(request: Request): Promise<string | Response> {
   if (!cloudHistoryConfigured()) return json(503, { error: "cloud_unavailable" });
-  const owner = ownerHashFromRequest(request);
+  const owner = await resolveOwnerHashFromRequest(request);
   return owner ?? json(401, { error: "invalid_owner" });
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   const { data, error } = await getSupabaseAdmin().from("device_settings").select("settings").eq("owner_hash", owner).maybeSingle();
   if (error) return json(503, { error: "cloud_read_failed" });
@@ -24,7 +24,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function PUT(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   let body: unknown;
   try { body = await request.json(); } catch { return json(400, { error: "invalid_body" }); }
@@ -38,4 +38,3 @@ export async function PUT(request: Request): Promise<Response> {
   }, { onConflict: "owner_hash" });
   return error ? json(503, { error: "cloud_write_failed" }) : json(200, { saved: true });
 }
-

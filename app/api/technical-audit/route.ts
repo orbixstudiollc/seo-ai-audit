@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cloudHistoryConfigured, getSupabaseAdmin, ownerHashFromRequest } from "@/lib/cloud/server";
+import { cloudHistoryConfigured, getSupabaseAdmin, resolveOwnerHashFromRequest } from "@/lib/cloud/server";
 import {
   dataForSeoConfigured,
   pollOnPageTask,
@@ -34,9 +34,9 @@ function json(status: number, body: unknown): Response {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-function requestOwner(request: Request): string | Response {
+async function requestOwner(request: Request): Promise<string | Response> {
   if (!cloudHistoryConfigured()) return json(503, { error: "cloud_unavailable" });
-  const owner = ownerHashFromRequest(request);
+  const owner = await resolveOwnerHashFromRequest(request);
   return owner ?? json(401, { error: "invalid_owner" });
 }
 
@@ -100,7 +100,7 @@ async function ensureUsageLedger(owner: string, row: ProviderTaskRow): Promise<b
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   if (!dataForSeoConfigured()) return json(503, { error: "provider_unavailable" });
 
@@ -195,7 +195,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   const auditId = new URL(request.url).searchParams.get("auditId");
   if (!auditId || auditId.length > 4096) return json(400, { error: "invalid_audit_id" });

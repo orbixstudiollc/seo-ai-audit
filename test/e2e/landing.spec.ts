@@ -20,6 +20,16 @@ test("landing page renders hero and a focusable URL form", async ({ page }) => {
   expect(borderAfter).not.toBe(borderBefore);
 });
 
+test("opens the optional account sign-in dialog without blocking anonymous audits", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Account" })).toBeVisible();
+  await expect(page.getByText("Auditing remains available without an account.", { exact: false })).toBeVisible();
+  await expect(page.getByLabel("Email address")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeFocused();
+});
+
 test("invalid URL shows an inline error and stays on the landing page", async ({ page }) => {
   await page.goto("/");
   const input = page.getByRole("textbox", { name: "URL to audit" });

@@ -1,6 +1,6 @@
 import { isHistoryRecord, type AuditHistoryRecord } from "@/lib/history";
 import { isSavedReport, type SavedAuditReport } from "@/lib/reports";
-import { cloudHistoryConfigured, getSupabaseAdmin, ownerHashFromRequest } from "@/lib/cloud/server";
+import { cloudHistoryConfigured, getSupabaseAdmin, resolveOwnerHashFromRequest } from "@/lib/cloud/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,9 +32,9 @@ async function readJson(request: Request): Promise<unknown> {
   return JSON.parse(text) as unknown;
 }
 
-function requestOwner(request: Request): string | Response {
+async function requestOwner(request: Request): Promise<string | Response> {
   if (!cloudHistoryConfigured()) return json(503, { error: "cloud_unavailable" });
-  const ownerHash = ownerHashFromRequest(request);
+  const ownerHash = await resolveOwnerHashFromRequest(request);
   return ownerHash ?? json(401, { error: "invalid_owner" });
 }
 
@@ -88,7 +88,7 @@ function reportToRow(ownerHash: string, report: SavedAuditReport) {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   const { data, error } = await getSupabaseAdmin()
     .from("audit_runs")
@@ -101,7 +101,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   let body: unknown;
   try { body = await readJson(request); } catch (error) { return json(error instanceof Error && error.message === "payload_too_large" ? 413 : 400, { error: error instanceof Error && error.message === "payload_too_large" ? "payload_too_large" : "invalid_body" }); }
@@ -119,7 +119,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function PUT(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   let body: unknown;
   try { body = await readJson(request); } catch (error) { return json(error instanceof Error && error.message === "payload_too_large" ? 413 : 400, { error: error instanceof Error && error.message === "payload_too_large" ? "payload_too_large" : "invalid_body" }); }
@@ -145,7 +145,7 @@ export async function PUT(request: Request): Promise<Response> {
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  const owner = requestOwner(request);
+  const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   let body: unknown;
   try { body = await readJson(request); } catch (error) { return json(error instanceof Error && error.message === "payload_too_large" ? 413 : 400, { error: error instanceof Error && error.message === "payload_too_large" ? "payload_too_large" : "invalid_body" }); }

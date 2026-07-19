@@ -5,22 +5,24 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-20 · by: Supabase Phase 1 session · branch `main`
+Last updated: 2026-07-20 · by: cloud completion session · branch `main`
 
 ## Product
 
-Open, anonymous, low-friction tool: paste a URL → streamed AI-search audit
+Open, anonymous-first, low-friction tool: paste a URL → streamed AI-search audit
 (AEO / GEO / Citability / AI Overview scores + evidence-backed findings).
-No account or signup; audit queries and reports have a Supabase-backed durable
-store with a browser fallback. **Live:**
+No signup is required; audit queries and reports have a Supabase-backed durable
+store with a browser fallback, and optional email-link sign-in enables
+cross-device recovery. **Live:**
 https://seo-ai-audit-pied.vercel.app
 
 ## Current status (one paragraph)
 
-The anonymous v1 product and Supabase Phase 1 are live in production with the
-database migration applied and cloud storage validated end to end. Cloud Phase
-2 (DataForSEO technical crawl) is now in implementation. The product supports
-anonymous single-page and whole-site audits of up to 500 discovered pages,
+The anonymous-first product and durable Supabase storage are live. The
+DataForSEO technical-crawl phase is deployed and awaits provider credentials
+for its live paid-task proof. Phase 5 optional account recovery is implemented;
+its production migration and Auth URLs are configured. The product supports
+single-page and whole-site audits of up to 500 discovered pages,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
 typecheck, 241 unit/integration tests, production build, and 21 Playwright
@@ -35,8 +37,9 @@ Every submitted query is cached locally and synchronized to private Supabase
 tables through server-only routes.
 Completed reports can be reopened from cloud or IndexedDB; the dashboard
 supports 500 records and paginates 10 cards at a time. Failed bulk pages can be
-retried individually. Current gates: lint/typecheck/build, 251 tests, and 21
-Playwright journeys. Account auth remains deferred.
+retried individually. The ownership migration passed a rollback-only production
+database test. Current gates: lint/typecheck/build, 267 tests, and 22
+Playwright journeys.
 Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM cost.
 
 ## Plan → status
@@ -54,23 +57,22 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 8 | Phase 4a: dashboard, browser-local history, global settings | `main` via PR #1 | ✅ merged + deployed |
 | 9 | Phase 4b: export, share, schema output, result OG | `main` via PR #1 | ✅ merged + deployed |
 | 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` `11b879e`+ | ✅ migrated + deployed + validated |
-| 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` working tree | 🟡 in progress |
-| 12 | Phase 5: account auth + cross-device identity | next phase | ⏭ authorized |
+| 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` `e9a1269` | ✅ implemented + deployed; credentials needed for live provider task |
+| 12 | Phase 5: optional account auth + cross-device identity | `main` working tree | 🟡 implemented + migrated; deployment/live email proof pending |
 
 ## Pending user actions
 
-1. **Credential hygiene** — keep the rotated Supabase secret only in Vercel.
-2. Optional: run a normal production audit to populate the first user-owned
-   cloud report; the synthetic storage validation row was removed.
+1. Add server-only `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` in Vercel for
+   the required low-limit live provider validation.
+2. Supply an email address for the end-to-end magic-link and cross-device
+   account recovery proof.
 3. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
    `ENCRYPTION_KEY` vars from Vercel (WS1 report, open question 1).
-4. Add server-only `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` in Vercel for
-   Cloud Phase 2 production validation.
 
 ## Key decisions (full log: `docs/DECISIONS.md`)
 
-- D-011 supersedes D-001's no-database portion: anonymous Supabase persistence
-  is Phase 1; account auth remains deferred.
+- D-011 supersedes D-001's no-database portion; D-012 authorizes the remaining
+  provider/account phases; D-013 keeps account recovery optional and server-owned.
 - D-004 SSE contract v1: `meta → signals → scores → rewrites → done`
   (DATA-CONTRACT v1.0 — the law for all workstreams).
 - D-005 no det-only degraded mode; D-006 share link = re-run;

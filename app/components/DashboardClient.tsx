@@ -32,6 +32,7 @@ import {
 } from "@/lib/cloud/history";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
+import { ACCOUNT_OWNER_CHANGED_EVENT } from "@/lib/auth/events";
 
 const STATUS_STYLE: Record<AuditHistoryStatus, { label: string; glyph: string; color: string; tint: string }> = {
   started: { label: "Started", glyph: "●", color: "var(--accent-ink)", tint: "var(--accent-tint)" },
@@ -155,8 +156,9 @@ export function DashboardClient() {
       if (!active) return;
       setCloudState(summariesMigrated ? "synced" : "local");
     };
-    void hydrate(); window.addEventListener(HISTORY_CHANGED_EVENT, syncLocal); window.addEventListener("storage", syncLocal);
-    return () => { active = false; window.removeEventListener(HISTORY_CHANGED_EVENT, syncLocal); window.removeEventListener("storage", syncLocal); };
+    const syncAccount = () => { setCloudState("syncing"); void hydrate(); };
+    void hydrate(); window.addEventListener(HISTORY_CHANGED_EVENT, syncLocal); window.addEventListener("storage", syncLocal); window.addEventListener(ACCOUNT_OWNER_CHANGED_EVENT, syncAccount);
+    return () => { active = false; window.removeEventListener(HISTORY_CHANGED_EVENT, syncLocal); window.removeEventListener("storage", syncLocal); window.removeEventListener(ACCOUNT_OWNER_CHANGED_EVENT, syncAccount); };
   }, [settings.historyLimit]);
 
   const visible = useMemo(() => filterAndSortHistory(records, { query, mode, sort }), [records, query, mode, sort]);

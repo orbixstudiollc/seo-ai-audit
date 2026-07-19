@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/cloud/server", () => ({
   cloudHistoryConfigured: () => true,
-  ownerHashFromRequest: () => "owner-hash",
+  resolveOwnerHashFromRequest: async () => "owner-hash",
   getSupabaseAdmin: () => ({ from: mocks.from }),
 }));
 
