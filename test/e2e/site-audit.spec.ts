@@ -120,9 +120,49 @@ test("audits a whole site: discovers a 3-page sitemap, streams per-page results,
   await page.getByRole("link", { name: "View dashboard" }).click();
   await expect(page.getByText("History (1)", { exact: true })).toBeVisible();
   await expect(page.getByText(/· 3 pages$/)).toBeVisible();
+  let technicalStarted = false;
+  await page.route("/api/technical-audit**", async (route) => {
+    const request = route.request();
+    const now = "2026-07-20T00:00:00.000Z";
+    const task = {
+      auditId: "site:fixture",
+      providerTaskId: "provider-task",
+      status: technicalStarted ? "complete" : "queued",
+      costUsd: 0.0125,
+      createdAt: now,
+      updatedAt: now,
+      errorMessage: null,
+      result: technicalStarted ? {
+        target: "example.test", crawlProgress: "finished", maxCrawlPages: 500,
+        pagesCrawled: 26, pagesInQueue: 0, onpageScore: 82,
+        pages: Array.from({ length: 26 }, (_, index) => ({
+          url: `https://example.test/page-${index + 1}`, statusCode: 200,
+          title: `Technical page ${index + 1}`, onpageScore: 90 - index,
+          clickDepth: index, issueKeys: index === 0 ? ["high_loading_time"] : [],
+        })),
+      } : null,
+    };
+    if (request.method() === "POST") {
+      expect((await request.postDataJSON()).limit).toBe(500);
+      technicalStarted = true;
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ task: { ...task, status: "queued", result: null }, reused: false }) });
+      return;
+    }
+    if (!technicalStarted) {
+      await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: "task_not_found", configured: true }) });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ task }) });
+  });
   await page.getByRole("link", { name: "Open report" }).click();
   await expect(page.getByText(/Saved report/)).toBeVisible();
   await expect(page.getByText("Site rollup")).toBeVisible();
+  await expect(page.getByText("Technical SEO", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Run technical crawl" }).click();
+  await expect(page.getByText("Pages crawled", { exact: true })).toBeVisible();
+  await expect(page.getByText("Page 1 of 2", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText("Technical page 26", { exact: true })).toBeVisible();
 });
 
 test("retries one failed bulk page without rerunning the whole site", async ({ page }) => {

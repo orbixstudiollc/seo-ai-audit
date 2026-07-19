@@ -49,3 +49,9 @@ propose; the coordinator records.
   policies; only server routes holding `SUPABASE_SECRET_KEY` can access them.
   Browser storage remains an offline fallback and migration source. Account
   auth/cross-device recovery remains a later phase.
+- **D-012** 2026-07-20 — **Resume all remaining phases.** The user's explicit
+  instruction to complete all phases authorizes the previously deferred work.
+  Cloud Phase 2 adds an opt-in DataForSEO OnPage crawl to saved whole-site
+  reports with a 500-page cap, conservative cost settings, durable task state,
+  and an actual-cost ledger. Phase 5 then adds account identity and
+  cross-device recovery while preserving anonymous auditing.

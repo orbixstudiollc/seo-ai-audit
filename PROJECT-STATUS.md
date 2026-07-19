@@ -18,7 +18,8 @@ https://seo-ai-audit-pied.vercel.app
 ## Current status (one paragraph)
 
 The anonymous v1 product and Supabase Phase 1 are live in production with the
-database migration applied and cloud storage validated end to end. It supports
+database migration applied and cloud storage validated end to end. Cloud Phase
+2 (DataForSEO technical crawl) is now in implementation. The product supports
 anonymous single-page and whole-site audits of up to 500 discovered pages,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
@@ -53,7 +54,8 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 8 | Phase 4a: dashboard, browser-local history, global settings | `main` via PR #1 | ✅ merged + deployed |
 | 9 | Phase 4b: export, share, schema output, result OG | `main` via PR #1 | ✅ merged + deployed |
 | 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` `11b879e`+ | ✅ migrated + deployed + validated |
-| 11 | Account auth + cross-device identity | future phase | ⏸ deferred |
+| 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` working tree | 🟡 in progress |
+| 12 | Phase 5: account auth + cross-device identity | next phase | ⏭ authorized |
 
 ## Pending user actions
 
@@ -62,6 +64,8 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
    cloud report; the synthetic storage validation row was removed.
 3. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
    `ENCRYPTION_KEY` vars from Vercel (WS1 report, open question 1).
+4. Add server-only `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` in Vercel for
+   Cloud Phase 2 production validation.
 
 ## Key decisions (full log: `docs/DECISIONS.md`)
 
@@ -96,6 +100,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | Decision log | `docs/DECISIONS.md` |
 | Process, boundaries, model policy | `docs/COORDINATION.md` |
 | Per-workstream specs + reports (incl. reviews) | `docs/phases/` |
+| Remaining cloud/provider phases | `docs/phases/cloud-roadmap.md` |
 | Session handoffs (next-session prompts) | `docs/HANDOFF.md` |
 | Backend wipe SQL | `scripts/db-wipe.sql` |
 | Pre-pivot app (auth/DB/BYOK) | branch `backup/pre-rewrite` / tag `backup-pre-rewrite` |

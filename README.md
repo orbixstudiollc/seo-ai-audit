@@ -32,7 +32,8 @@ Rebuild happens in phased execution sessions; specs live in `specs/`.
 3. **Phase 3** — visual results dashboard.
 4. **Phase 4** — dashboard, history/settings, export, share links, schema output, and social metadata.
 5. **Supabase Phase 1** — durable anonymous history, reopenable reports, settings, and browser-cache migration.
-5. **Phase 5 (deferred)** — auth + persistence.
+6. **Cloud Phase 2** — DataForSEO technical crawl and provider cost ledger.
+7. **Phase 5** — account identity and cross-device recovery.
 
 ## Dev
 

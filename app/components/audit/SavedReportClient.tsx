@@ -9,6 +9,7 @@ import { saveAuditReport } from "@/lib/reports";
 import { loadCloudAuditReport } from "@/lib/cloud/history";
 import { AuditReportView } from "./AuditReportView";
 import { SiteAuditReportView } from "./SiteAuditReportView";
+import { TechnicalSeoPanel } from "./TechnicalSeoPanel";
 
 export function SavedReportClient({ id }: { id: string }) {
   const router = useRouter();
@@ -34,5 +35,5 @@ export function SavedReportClient({ id }: { id: string }) {
   }
 
   const state = report.state;
-  return <main className="flex flex-1 flex-col"><div className="mx-auto w-full max-w-4xl px-4 pt-6"><Link href="/dashboard" className="font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">← Back to dashboard</Link><p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p></div><SiteAuditReportView phase={report.phase} rootUrl={state.rootUrl} method={state.method} discoveredPages={state.discoveredPages} truncated={state.truncated} pages={state.pages} pageOrder={state.pageOrder} rollup={state.rollup} stoppedEarly={state.stoppedEarly} error={state.error} onRetry={() => router.push(`/audit/site?url=${encodeURIComponent(state.rootUrl ?? "")}`)} /></main>;
+  return <main className="flex flex-1 flex-col"><div className="mx-auto w-full max-w-4xl px-4 pt-6"><Link href="/dashboard" className="font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">← Back to dashboard</Link><p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p></div><SiteAuditReportView phase={report.phase} rootUrl={state.rootUrl} method={state.method} discoveredPages={state.discoveredPages} truncated={state.truncated} pages={state.pages} pageOrder={state.pageOrder} rollup={state.rollup} stoppedEarly={state.stoppedEarly} error={state.error} onRetry={() => router.push(`/audit/site?url=${encodeURIComponent(state.rootUrl ?? "")}`)} />{state.rootUrl && <div className="mx-auto w-full max-w-4xl px-4 pb-6 sm:px-6 lg:px-8"><TechnicalSeoPanel auditId={report.id} rootUrl={state.rootUrl} limit={500} /></div>}</main>;
 }
