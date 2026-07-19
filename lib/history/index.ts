@@ -1,10 +1,11 @@
 import { SIGNAL_IDS, type Lens, type SignalId } from "@aeo/scoring";
 
-export const HISTORY_KEY = "seo-ai-audit:history:v3";
-export const LEGACY_HISTORY_KEY = "seo-ai-audit:history:v2";
+export const HISTORY_KEY = "seo-ai-audit:history:v4";
+export const LEGACY_HISTORY_KEY = "seo-ai-audit:history:v3";
+export const LEGACY_HISTORY_V2_KEY = "seo-ai-audit:history:v2";
 export const LEGACY_HISTORY_V1_KEY = "seo-ai-audit:history:v1";
 export const HISTORY_CHANGED_EVENT = "seo-ai-audit:history-changed";
-export const HISTORY_VERSION = 3;
+export const HISTORY_VERSION = 4;
 
 export type AuditHistoryMode = "single" | "site";
 export type AuditHistoryStatus = "started" | "complete" | "partial" | "failed";
@@ -42,6 +43,7 @@ export interface AuditHistoryRecord {
   scores: Record<Lens, number> | null;
   pageCount?: number;
   details?: AuditHistoryDetails;
+  reportAvailable?: boolean;
 }
 
 export interface HistoryFilters {
@@ -99,6 +101,7 @@ export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
     !Number.isNaN(Date.parse(value.createdAt)) &&
     (value.scores === null || isScores(value.scores)) &&
     (value.details === undefined || isDetails(value.details)) &&
+    (value.reportAvailable === undefined || typeof value.reportAvailable === "boolean") &&
     (value.finalUrl === undefined || typeof value.finalUrl === "string") &&
     (value.pageCount === undefined || (Number.isInteger(value.pageCount) && Number(value.pageCount) >= 0))
   );
@@ -111,13 +114,13 @@ export function loadHistory(storage: Pick<Storage, "getItem">): AuditHistoryReco
       const parsed: unknown = JSON.parse(current);
       return Array.isArray(parsed) ? parsed.filter(isHistoryRecord) : [];
     }
-    for (const legacyKey of [LEGACY_HISTORY_KEY, LEGACY_HISTORY_V1_KEY]) {
+    for (const legacyKey of [LEGACY_HISTORY_KEY, LEGACY_HISTORY_V2_KEY, LEGACY_HISTORY_V1_KEY]) {
       const raw = storage.getItem(legacyKey);
       if (!raw) continue;
       const parsed: unknown = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
       return parsed.flatMap((value): AuditHistoryRecord[] => {
-        if (!isRecord(value) || (value.version !== 1 && value.version !== 2)) return [];
+        if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== 3)) return [];
         const migrated = { ...value, version: HISTORY_VERSION };
         return isHistoryRecord(migrated) ? [migrated] : [];
       });

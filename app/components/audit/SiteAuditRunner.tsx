@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSiteAuditStream } from "@/app/hooks/useSiteAuditStream";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { addHistoryRecord, createHistoryId, loadHistory, notifyHistoryChanged, storeHistory, type AuditHistoryRecord } from "@/lib/history";
+import { pruneAuditReports, saveAuditReport } from "@/lib/reports";
 import { SiteAuditReportView } from "./SiteAuditReportView";
 import { SavedAuditActions } from "./SavedAuditActions";
 
@@ -22,6 +23,7 @@ export function SiteAuditRunner({ url }: Props) {
     return { createdAt, id: createHistoryId("site", url, createdAt) };
   });
   const lastRecordRef = useRef("");
+  const reportSavedRef = useRef(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function SiteAuditRunner({ url }: Props) {
         ? (stream.stoppedEarly ? "partial" : "complete")
         : stream.phase === "error" ? (stream.rollup ? "partial" : "failed") : "started";
       const record: AuditHistoryRecord = {
-        id: historyRun.id, version: 3, url, title: new URL(url).hostname,
+        id: historyRun.id, version: 4, url, title: new URL(url).hostname,
         mode: "site" as const, createdAt: historyRun.createdAt, status,
         scores: stream.rollup?.avgScores ?? null, pageCount: stream.rollup?.pagesAudited,
         details: {
@@ -44,11 +46,30 @@ export function SiteAuditRunner({ url }: Props) {
       };
       const serialized = JSON.stringify(record);
       if (serialized === lastRecordRef.current) return;
-      const next = addHistoryRecord(loadHistory(window.localStorage), record, settings.historyLimit);
+      const current = loadHistory(window.localStorage);
+      record.reportAvailable = current.find((item) => item.id === historyRun.id)?.reportAvailable;
+      const next = addHistoryRecord(current, record, settings.historyLimit);
       storeHistory(window.localStorage, next); notifyHistoryChanged(); lastRecordRef.current = serialized;
-      if (stream.phase === "done" || stream.phase === "error") queueMicrotask(() => setSaved(true));
+      void pruneAuditReports(new Set(next.map((item) => item.id))).catch(() => undefined);
+      if (stream.phase === "done" || stream.phase === "error") {
+        if (!reportSavedRef.current && stream.rollup) {
+          reportSavedRef.current = true;
+          const state = {
+            rootUrl: stream.rootUrl, method: stream.method, discoveredPages: stream.discoveredPages,
+            truncated: stream.truncated, pages: stream.pages, pageOrder: stream.pageOrder,
+            rollup: stream.rollup, stoppedEarly: stream.stoppedEarly, error: stream.error,
+          };
+          void saveAuditReport({ version: 1, id: historyRun.id, kind: "site", createdAt: historyRun.createdAt, phase: stream.phase, state })
+            .then(() => {
+              const records = loadHistory(window.localStorage);
+              const updated = records.map((item) => item.id === historyRun.id ? { ...item, reportAvailable: true } : item);
+              storeHistory(window.localStorage, updated); notifyHistoryChanged();
+              setSaved(true);
+            }).catch(() => { reportSavedRef.current = false; setSaved(true); });
+        } else if (!stream.rollup) queueMicrotask(() => setSaved(true));
+      }
     } catch { /* Audit display must never fail because storage is unavailable. */ }
-  }, [historyRun, ready, settings, stream.phase, stream.rollup, stream.stoppedEarly, stream.error, url]);
+  }, [historyRun, ready, settings, stream, url]);
 
   return (
     <>

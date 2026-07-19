@@ -11,7 +11,7 @@ Last updated: 2026-07-19 · by: production release session · branch `main`
 
 Open, anonymous, low-friction tool: paste a URL → streamed AI-search audit
 (AEO / GEO / Citability / AI Overview scores + evidence-backed findings).
-No account or signup; optional audit queries and summaries stay only in the browser. **Live:**
+No account or signup; optional audit queries and reports stay only in the browser. **Live:**
 https://seo-ai-audit-pied.vercel.app
 
 ## Current status (one paragraph)
@@ -29,8 +29,9 @@ links, FAQ JSON-LD, result social metadata, and a validated plain-JSON fallback
 for providers that reject structured output. A real production audit completed
 through both provider calls and saved its compact browser-local history record.
 Every submitted query is recorded locally and updated through started, failed,
-partial, or complete status. Each audit card can reopen a bounded review
-snapshot without storing the full report. Gates are green at 239 tests and 19 Playwright
+partial, or complete status. Each newly completed or meaningfully partial audit
+can be reopened later as a read-only report from browser-local IndexedDB, while
+the dashboard keeps compact versioned summaries in localStorage. Gates are green at 240 tests and 19 Playwright
 journeys. Auth/server persistence stays
 deferred (Phase 5), and the Supabase wipe SQL is still awaiting the user.
 

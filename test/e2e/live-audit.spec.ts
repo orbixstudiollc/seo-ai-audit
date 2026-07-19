@@ -45,4 +45,8 @@ test("pastes a URL and gets a rendered report from a real audit", async ({ page 
   await page.getByRole("link", { name: "View dashboard" }).click();
   await expect(page.getByRole("heading", { name: "Audit dashboard" })).toBeVisible();
   await expect(page.getByText("Example Domain", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Open report" }).click();
+  await expect(page.getByText(/Saved locally/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Example Domain" })).toBeVisible();
+  await expect(page.getByText("Answer-first intro", { exact: true })).toBeVisible();
 });

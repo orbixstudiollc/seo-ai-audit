@@ -5,6 +5,7 @@ import { LENSES, SIGNAL_IDS } from "@aeo/scoring";
 import { useAuditStream } from "@/app/hooks/useAuditStream";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { addHistoryRecord, createHistoryId, loadHistory, notifyHistoryChanged, storeHistory, type AuditHistoryRecord } from "@/lib/history";
+import { pruneAuditReports, saveAuditReport } from "@/lib/reports";
 import { AuditReportView } from "./AuditReportView";
 import { SavedAuditActions } from "./SavedAuditActions";
 
@@ -23,6 +24,7 @@ export function AuditRunner({ url }: Props) {
     return { createdAt, id: createHistoryId("single", url, createdAt) };
   });
   const lastRecordRef = useRef("");
+  const reportSavedRef = useRef(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -46,15 +48,32 @@ export function AuditRunner({ url }: Props) {
         errorMessage: stream.error ? compactText(stream.error.message) : undefined,
       };
       const record: AuditHistoryRecord = {
-        id: historyRun.id, version: 3, url, finalUrl: stream.page?.finalUrl,
+        id: historyRun.id, version: 4, url, finalUrl: stream.page?.finalUrl,
         title: stream.page?.title || new URL(url).hostname, mode: "single" as const,
         createdAt: historyRun.createdAt, status, scores, details,
       };
       const serialized = JSON.stringify(record);
       if (serialized === lastRecordRef.current) return;
-      const next = addHistoryRecord(loadHistory(window.localStorage), record, settings.historyLimit);
+      const current = loadHistory(window.localStorage);
+      record.reportAvailable = current.find((item) => item.id === historyRun.id)?.reportAvailable;
+      const next = addHistoryRecord(current, record, settings.historyLimit);
       storeHistory(window.localStorage, next); notifyHistoryChanged(); lastRecordRef.current = serialized;
-      if (stream.phase === "done" || stream.phase === "error") queueMicrotask(() => setSaved(true));
+      void pruneAuditReports(new Set(next.map((item) => item.id))).catch(() => undefined);
+      if (stream.phase === "done" || stream.phase === "error") {
+        if (!reportSavedRef.current && stream.page && stream.scores && stream.findings) {
+          reportSavedRef.current = true;
+          void saveAuditReport({
+            version: 1, id: historyRun.id, kind: "single", createdAt: historyRun.createdAt,
+            phase: stream.phase, report: { page: stream.page, scores: stream.scores, findings: stream.findings, rewrites: stream.rewrites },
+            error: stream.error,
+          }).then(() => {
+            const records = loadHistory(window.localStorage);
+            const updated = records.map((item) => item.id === historyRun.id ? { ...item, reportAvailable: true } : item);
+            storeHistory(window.localStorage, updated); notifyHistoryChanged();
+            setSaved(true);
+          }).catch(() => { reportSavedRef.current = false; setSaved(true); });
+        } else if (!stream.page || !stream.scores || !stream.findings) queueMicrotask(() => setSaved(true));
+      }
     } catch { /* Audit display must never fail because storage is unavailable. */ }
   }, [historyRun, ready, settings, stream.phase, stream.page, stream.scores, stream.findings, stream.rewrites, stream.error, url]);
 

@@ -9,6 +9,7 @@ import {
   HISTORY_CHANGED_EVENT,
   HISTORY_KEY,
   LEGACY_HISTORY_KEY,
+  LEGACY_HISTORY_V2_KEY,
   LEGACY_HISTORY_V1_KEY,
   averageScore,
   filterAndSortHistory,
@@ -18,6 +19,7 @@ import {
   type AuditHistoryRecord,
   type AuditHistoryStatus,
 } from "@/lib/history";
+import { clearAuditReports, deleteAuditReport } from "@/lib/reports";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 
@@ -99,7 +101,7 @@ function AuditHistoryCard({ record, onRemove }: { record: AuditHistoryRecord; on
         </div>
         <div className="flex items-center gap-3">
           {overall !== null && <div className="min-w-20 border border-line bg-surface-2 px-3 py-2 text-center"><span className="block font-mono text-[8px] uppercase tracking-wider text-text-3">Average</span><strong className="font-mono text-xl tabular-nums" style={{ color: scoreBand(overall).colorVar }}>{overall}</strong></div>}
-          <div className="flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-wider"><Link href={rerun} className="text-accent-ink hover:underline">Run again</Link><a href={record.url} target="_blank" rel="noreferrer" className="text-text-2 hover:underline">Open URL</a><button type="button" onClick={onRemove} className="text-score-weak hover:underline">Remove</button></div>
+          <div className="flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-wider">{record.reportAvailable && <Link href={`/report/${encodeURIComponent(record.id)}`} className="font-semibold text-accent-ink hover:underline">Open report</Link>}<Link href={rerun} className="text-accent-ink hover:underline">Run again</Link><a href={record.url} target="_blank" rel="noreferrer" className="text-text-2 hover:underline">Open URL</a><button type="button" onClick={onRemove} className="text-score-weak hover:underline">Remove</button></div>
         </div>
       </div>
       {record.scores && <div className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-4">{LENS_ORDER.map((lens) => <div key={lens} className="flex items-center justify-between bg-surface-2 px-3 py-2"><span className="font-mono text-[9px] uppercase tracking-wider text-text-3">{LENS_META[lens].code}</span><strong className="font-mono text-base tabular-nums" style={{ color: scoreBand(record.scores![lens]).colorVar }}>{record.scores![lens]}</strong></div>)}</div>}
@@ -126,7 +128,8 @@ export function DashboardClient() {
   function persist(next: AuditHistoryRecord[]) { storeHistory(window.localStorage, next); setRecords(next); window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT)); }
   function clearAll() {
     if (settings.confirmBeforeClear && !window.confirm("Clear all audit history from this browser?")) return;
-    for (const key of [HISTORY_KEY, LEGACY_HISTORY_KEY, LEGACY_HISTORY_V1_KEY]) window.localStorage.removeItem(key);
+    for (const key of [HISTORY_KEY, LEGACY_HISTORY_KEY, LEGACY_HISTORY_V2_KEY, LEGACY_HISTORY_V1_KEY]) window.localStorage.removeItem(key);
+    void clearAuditReports().catch(() => undefined);
     setRecords([]); window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT));
   }
 
@@ -136,7 +139,7 @@ export function DashboardClient() {
 
       <Card label={`History (${records.length})`} aside={records.length > 0 ? <Button size="sm" variant="ghost" onClick={clearAll}>Clear history</Button> : undefined} bodyClassName="bg-surface-2">
         {records.length > 0 && <div className="grid gap-3 border-b border-line bg-surface-1 p-3 sm:grid-cols-3"><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Title or domain" className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1" /></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Type<select value={mode} onChange={(event) => setMode(event.target.value as typeof mode)} className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1"><option value="all">All</option><option value="single">Single page</option><option value="site">Whole site</option></select></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Sort<select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest score</option><option value="lowest">Lowest score</option></select></label></div>}
-        {!ready ? <p className="wb-skeleton p-6 text-sm text-text-3">Loading local history…</p> : records.length === 0 ? <div className="bg-surface-1 p-8 text-center"><h2 className="font-semibold">No audits saved yet</h2><p className="mt-2 text-sm text-text-2">Run your first audit and it will appear here automatically.</p><Link href="/" className="mt-4 inline-block font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">Start an audit →</Link></div> : visible.length === 0 ? <p className="bg-surface-1 p-8 text-center text-sm text-text-2">No audits match these filters.</p> : <ul className="grid gap-4 p-3 sm:p-4">{visible.map((record) => <AuditHistoryCard key={record.id} record={record} onRemove={() => persist(removeHistoryRecord(records, record.id))} />)}</ul>}
+        {!ready ? <p className="wb-skeleton p-6 text-sm text-text-3">Loading local history…</p> : records.length === 0 ? <div className="bg-surface-1 p-8 text-center"><h2 className="font-semibold">No audits saved yet</h2><p className="mt-2 text-sm text-text-2">Run your first audit and it will appear here automatically.</p><Link href="/" className="mt-4 inline-block font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">Start an audit →</Link></div> : visible.length === 0 ? <p className="bg-surface-1 p-8 text-center text-sm text-text-2">No audits match these filters.</p> : <ul className="grid gap-4 p-3 sm:p-4">{visible.map((record) => <AuditHistoryCard key={record.id} record={record} onRemove={() => { void deleteAuditReport(record.id).catch(() => undefined); persist(removeHistoryRecord(records, record.id)); }} />)}</ul>}
       </Card>
       <p className="text-center text-xs text-text-3">History stays on this device. Clearing browser data removes it; account synchronization is not enabled.</p>
     </main>

@@ -120,4 +120,7 @@ test("audits a whole site: discovers a 3-page sitemap, streams per-page results,
   await page.getByRole("link", { name: "View dashboard" }).click();
   await expect(page.getByText("History (1)", { exact: true })).toBeVisible();
   await expect(page.getByText(/· 3 pages$/)).toBeVisible();
+  await page.getByRole("link", { name: "Open report" }).click();
+  await expect(page.getByText(/Saved locally/)).toBeVisible();
+  await expect(page.getByText("Site rollup")).toBeVisible();
 });

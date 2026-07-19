@@ -1,13 +1,13 @@
 # Architecture — SEO AI Audit v1 (anonymous)
 
 Status: **target architecture** for the v1 rebuild. Owner: coordinator session
-(Fable). Last updated: 2026-07-17.
+(Fable). Last updated: 2026-07-19.
 
 ## Product in one line
 
 An open, anonymous, low-friction tool: paste a URL on the landing page, get a
 streamed AI-search audit (0–100 lens scores + evidence-backed findings) back.
-No account or signup. Audit summaries and preferences may be stored locally in
+No account or signup. Audit history, reopenable reports, and preferences may be stored locally in
 the browser; nothing is persisted server-side.
 
 ## Hard constraints (do not violate in any workstream)
@@ -17,7 +17,7 @@ the browser; nothing is persisted server-side.
    `backup/pre-rewrite`).
 2. **No database.** v1 is server-stateless. No drizzle, no postgres, no
    Supabase client. The client may keep versioned, compact audit queries, status, bounded review snapshots, and
-   preferences in localStorage; full reports and credentials are never stored.
+   preferences in localStorage. Reopenable reports may be stored in browser IndexedDB; credentials are never stored.
 3. **Server-side LLM key.** Audits run on a key the *operator* configures in
    the server env (Vercel) — never a per-user/BYOK key (that's gone with the
    auth teardown). The operator may point that key at Anthropic direct, an
@@ -55,8 +55,9 @@ Browser                          Vercel (Next.js 16, App Router)
 ```
 
 Data flows one way: URL in → SSE events out → client-side state → rendered
-report. Completed summaries may be added to browser-local history. Share = the
-URL itself (`/audit?url=…`).
+report. Completed summaries may be added to browser-local history and full
+reports may be reopened from browser-local IndexedDB. Share = the URL itself
+(`/audit?url=…`); saved reports never leave the browser.
 
 ## Repository map (what exists, who owns what)
 
