@@ -55,7 +55,7 @@ Settings key: `seo-ai-audit:settings:v1`. Invalid, corrupt, or future-version da
 ```text
 pnpm lint       PASS
 pnpm typecheck  PASS
-pnpm test       PASS — 29 files, 240 tests
+pnpm test       PASS — 29 files, 241 tests
 pnpm build      PASS — /dashboard static; /report/[id] dynamic
 pnpm e2e        PASS — 20 Chromium journeys
 ```

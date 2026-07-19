@@ -140,7 +140,7 @@ export function addHistoryRecord(
   record: AuditHistoryRecord,
   limit = 25,
 ): AuditHistoryRecord[] {
-  const safeLimit = Math.max(1, Math.min(50, Math.floor(limit)));
+  const safeLimit = Math.max(1, Math.min(500, Math.floor(limit)));
   return [record, ...records.filter((item) => item.id !== record.id)]
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .slice(0, safeLimit);
