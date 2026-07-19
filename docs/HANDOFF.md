@@ -505,7 +505,7 @@ CONTEXT: Supabase Authentication > Emails > SMTP Settings still shows
 project alias. The app has no remaining DataForSEO credential or code blocker.
 Do not expose or commit either provider secret.
 
-## 2026-07-20 · One-click failed-page bulk recovery · main working tree
+## 2026-07-20 · One-click failed-page bulk recovery · main `a62bd3a`
 
 DONE: Added a single “Retry failed pages” action to live and reopened
 whole-site reports. The client sends only failed URLs through a new explicit
@@ -519,8 +519,14 @@ GATES: Lint, TypeScript, production build, 273 unit/integration tests, and 24
 Playwright journeys pass. Browser coverage proves the request excludes the
 successful URL and that a reopened report keeps the merged result after reload.
 
-NEXT: Push, deploy, and verify the control on a saved production report
-containing failed pages.
+DEPLOYED: Commit `a62bd3a` is live as deployment
+`dpl_J1sAf2KJYWcPgTNPGH8uHNiYYbch` on
+`seo-ai-audit-orbix2.vercel.app`. Production returned HTTP 200 and the explicit
+retry route rejected a cross-origin page with HTTP 400 `invalid_url`, proving
+the selective-retry validation is active without incurring provider spend.
+
+NEXT: Use “Retry failed pages” on a production report when failures occur and
+monitor provider/rate-limit behavior during large recovery batches.
 
 CONTEXT: Explicit retry requests use `{ url, pages }`; they must not include
 `limit`. Successful URLs are never submitted, so they incur no new LLM cost.
