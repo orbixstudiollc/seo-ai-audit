@@ -295,3 +295,23 @@ v3 snapshot; older migrated cards intentionally show the rerun prompt.
 CONTEXT: Current key `seo-ai-audit:history:v3`; v2 and v1 are migration-only.
 The redesign uses the existing Swiss/editorial tokens and native `<details>` /
 `<summary>` keyboard behavior.
+
+## 2026-07-19 · Reopen saved audit reports · main
+
+DONE: Added a durable browser-local “Open report” flow for newly completed or
+meaningfully partial single-page and whole-site audits. Full report state is
+stored in versioned IndexedDB, while compact dashboard history moved to v4 and
+keeps only an availability flag. `/report/[id]` renders the existing report UI
+read-only; delete, clear-history, and retention-limit pruning also remove the
+corresponding IndexedDB entries. V1–v3 history migrates without loss, and old
+or failed summary-only entries remain rerunnable. Gates: lint/typecheck/build
+PASS, 240/240 tests, 19/19 Playwright journeys including both saved-report
+routes. Commit `8dfd666`; production deployment
+`dpl_D6toD6tXPCmTfCsS3ZmvbYDwi2RW` is READY and aliased to the canonical URL.
+
+NEXT: No release work remains for this change.
+
+CONTEXT: Current history key `seo-ai-audit:history:v4`; report database
+`seo-ai-audit:reports` version 1. Both stores are browser/device specific and
+never synced to the server. If IndexedDB is unavailable, the compact history
+record still works and offers Run again.
