@@ -451,9 +451,14 @@ and 22 Playwright journeys. Reports:
 `docs/phases/dataforseo-phase2-report.md` and
 `docs/phases/account-phase5-report.md`.
 
-NEXT: Commit, deploy, and validate the Phase 5 UI/API in production. Final
-provider proof requires `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD`; final
-cross-device proof requires a user-supplied email address for the magic link.
+DEPLOYED: Commit `7b51ac2` is live as
+`dpl_91Qtr94emxTMS7FnCZPBHygCZwTL`. Canonical HTML and the rendered browser
+show the optional account drawer; anonymous history returned HTTP 200 and an
+unverified account-link request returned HTTP 401 `invalid_session`.
+
+NEXT: Final provider proof requires `DATAFORSEO_LOGIN` +
+`DATAFORSEO_PASSWORD`; final cross-device proof requires a user-supplied email
+address for the magic link.
 
 CONTEXT: Do not send an unsolicited authentication email or invent provider
 credentials. The database and UI work can ship independently; keep the overall

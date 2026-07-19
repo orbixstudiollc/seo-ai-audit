@@ -58,7 +58,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 9 | Phase 4b: export, share, schema output, result OG | `main` via PR #1 | ✅ merged + deployed |
 | 10 | Supabase Phase 1: anonymous durable history/reports/settings | `main` `11b879e`+ | ✅ migrated + deployed + validated |
 | 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` `e9a1269` | ✅ implemented + deployed; credentials needed for live provider task |
-| 12 | Phase 5: optional account auth + cross-device identity | `main` working tree | 🟡 implemented + migrated; deployment/live email proof pending |
+| 12 | Phase 5: optional account auth + cross-device identity | `main` `7b51ac2` | ✅ implemented + migrated + deployed; live email proof pending |
 
 ## Pending user actions
 

@@ -37,6 +37,11 @@ Date: 2026-07-20
 - Browser coverage verifies the optional sign-in drawer, keyboard focus, and
   320-pixel header layout. API tests verify account-session enforcement and
   owner resolution.
+- Commit `7b51ac2` was deployed as
+  `dpl_91Qtr94emxTMS7FnCZPBHygCZwTL` and attached to the canonical alias.
+  Production HTML and the rendered browser both expose the optional account
+  drawer. Anonymous history returns HTTP 200, while `/api/account/link`
+  without a verified session returns HTTP 401 `invalid_session`.
 
 ## Remaining live proof
 
