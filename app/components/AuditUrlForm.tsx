@@ -27,7 +27,7 @@ function validateUrl(value: string): string | null {
 
 const MODES: { value: AuditMode; label: string; help: string }[] = [
   { value: "single", label: "Single page", help: "Audit one URL." },
-  { value: "site", label: "Whole site", help: "Discover and audit up to 30 pages." },
+  { value: "site", label: "Whole site", help: "Discover and audit up to 500 pages." },
 ];
 
 export function AuditUrlForm() {

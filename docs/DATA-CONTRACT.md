@@ -178,12 +178,12 @@ endpoint and event union for whole-site audits.
 POST /api/audit/bulk
 Content-Type: application/json
 
-{ "url": "https://example.com", "limit": 30 }
+{ "url": "https://example.com", "limit": 500 }
 ```
 
-- `url`: same validation as §1. `limit`: optional, 1–50 (`DISCOVERY_HARD_MAX`),
-  defaults to 30 (`DISCOVERY_DEFAULT_LIMIT`).
-- Rate limited per IP (stricter than §1 — a crawl audits up to 50 pages, each
+- `url`: same validation as §1. `limit`: optional, 1–500 (`DISCOVERY_HARD_MAX`),
+  defaults to 500 (`DISCOVERY_DEFAULT_LIMIT`).
+- Rate limited per IP (stricter than §1 — a crawl audits up to 500 pages, each
   spending 2 LLM calls) and limited to one concurrent crawl per IP. Over
   either limit → HTTP 429 JSON `{ "error": "rate_limit" | "concurrent_site_limit", ... }`.
 - Success → HTTP 200 `text/event-stream`, same wire format as §2
@@ -234,7 +234,7 @@ export type SiteErrorKind =
 
 **Abuse/cost controls** (`lib/audit/siteGuards.ts`, `app/api/audit/bulk/route.ts`):
 
-- Discovery is capped at `limit` pages (≤50 hard max) — `lib/discovery`.
+- Discovery is capped at `limit` pages (≤500 hard max) — `lib/discovery`.
 - Per-IP: 1 concurrent crawl, 2/hour, 5/day (vs. §1's 5/min, 20/day per page).
 - A wall-clock budget (240s) stops the queue from starting new pages once
   spent — in-flight pages are left to finish, not killed. `site:rollup`

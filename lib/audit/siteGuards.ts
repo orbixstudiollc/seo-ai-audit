@@ -3,7 +3,7 @@ import { checkRateLimit, type RateLimitResult } from "./ratelimit";
 /**
  * Abuse/cost controls specific to the anonymous bulk site-crawl endpoint. A
  * single crawl fans out to up to DISCOVERY_HARD_MAX pages, each spending 2
- * LLM calls — roughly 50x a single /api/audit request — so it needs its own,
+ * LLM calls — potentially hundreds of times a single /api/audit request — so it needs its own,
  * stricter set of guards on top of what the single-page route already has.
  */
 

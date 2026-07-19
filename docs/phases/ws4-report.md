@@ -55,7 +55,7 @@ widens to other private ranges, and is never set outside
 - `discoverPages.ts` — orchestrator: sitemap first, falls back to the crawl
   when the sitemap is missing/empty (only the root survived filtering),
   normalizes + dedupes + same-origin-filters + robots-filters, caps at
-  `limit` (default 30, hard max 50 — `DISCOVERY_DEFAULT_LIMIT`/
+  `limit` (default and hard max 500 — `DISCOVERY_DEFAULT_LIMIT`/
   `DISCOVERY_HARD_MAX`).
 
 Every fetch discovery makes goes through `safeFetchText` — same SSRF pin as

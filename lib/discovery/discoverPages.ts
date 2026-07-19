@@ -12,8 +12,8 @@ import { crawlSameOriginLinks } from "./linkCrawl";
  * SSRF surface beyond what fetchArticle.ts already guards for a single URL.
  */
 
-export const DISCOVERY_DEFAULT_LIMIT = 30;
-export const DISCOVERY_HARD_MAX = 50;
+export const DISCOVERY_DEFAULT_LIMIT = 500;
+export const DISCOVERY_HARD_MAX = 500;
 const CRAWL_MAX_DEPTH = 2;
 
 export type DiscoveryMethod = "sitemap" | "crawl";

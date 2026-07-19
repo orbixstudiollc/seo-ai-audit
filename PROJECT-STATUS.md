@@ -17,7 +17,7 @@ https://seo-ai-audit-pied.vercel.app
 ## Current status (one paragraph)
 
 The anonymous v1 product is **feature-complete, integrated on `main`, and live
-in production**. It supports anonymous single-page and whole-site audits,
+in production**. It supports anonymous single-page and whole-site audits of up to 500 discovered pages,
 streamed per-page results and site rollups, pinned-IP SSRF protection, and
 Anthropic or OpenAI-compatible providers. Release gates are green: lint,
 typecheck, 241 unit/integration tests, production build, and 20 Playwright

@@ -79,18 +79,21 @@ describe("discoverPages — sitemap path", () => {
     expect(result.truncated).toBe(true);
   });
 
-  it("clamps limit to the hard max even if a caller asks for more", async () => {
+  it("defaults to 500 pages and clamps larger requests to that hard max", async () => {
     safeFetchTextMock.mockImplementation(async (url: string) => {
       if (url === "https://example.com/robots.txt") return NOT_FOUND;
       if (url === "https://example.com/sitemap.xml") {
-        const urls = Array.from({ length: 80 }, (_, i) => `<url><loc>https://example.com/p${i}</loc></url>`).join("");
+        const urls = Array.from({ length: 550 }, (_, i) => `<url><loc>https://example.com/p${i}</loc></url>`).join("");
         return res(`<urlset>${urls}</urlset>`, 200, "application/xml");
       }
       return NOT_FOUND;
     });
 
-    const result = await discoverPages("https://example.com/", { limit: 999 });
-    expect(result.pages.length).toBeLessThanOrEqual(DISCOVERY_HARD_MAX);
+    const defaultResult = await discoverPages("https://example.com/");
+    const requestedResult = await discoverPages("https://example.com/", { limit: 999 });
+    expect(defaultResult.pages).toHaveLength(DISCOVERY_HARD_MAX);
+    expect(defaultResult.truncated).toBe(true);
+    expect(requestedResult.pages).toHaveLength(DISCOVERY_HARD_MAX);
   });
 });
 
