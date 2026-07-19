@@ -14,6 +14,13 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: false,
-    exclude: ["**/node_modules/**", "**/dist/**", "test/e2e/**", "**/.next/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "test/e2e/**",
+      "**/.next/**",
+      "**/.claude/**",
+      "**/.conductor/**",
+    ],
   },
 });

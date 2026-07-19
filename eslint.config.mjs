@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated coverage output (istanbul) — not source, must not be linted.
     "**/coverage/**",
+    // Conductor/Claude may keep nested worktrees and generated builds here.
+    // They are separate checkouts, not part of this application's source tree.
+    ".claude/**",
+    ".conductor/**",
   ]),
 ]);
 
