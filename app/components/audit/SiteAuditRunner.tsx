@@ -29,6 +29,11 @@ export function SiteAuditRunner({ url }: Props) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    if (!stream.retryingFailed) return;
+    reportSavedRef.current = false;
+  }, [stream.retryingFailed]);
+
+  useEffect(() => {
     if (!ready || !settings.autoSaveAudits) return;
     try {
       const status = stream.phase === "done"
@@ -85,7 +90,7 @@ export function SiteAuditRunner({ url }: Props) {
 
   return (
     <>
-      <SiteAuditReportView phase={stream.phase} rootUrl={stream.rootUrl} method={stream.method} discoveredPages={stream.discoveredPages} truncated={stream.truncated} pages={stream.pages} pageOrder={stream.pageOrder} rollup={stream.rollup} stoppedEarly={stream.stoppedEarly} error={stream.error} onRetry={stream.retry} />
+      <SiteAuditReportView phase={stream.phase} rootUrl={stream.rootUrl} method={stream.method} discoveredPages={stream.discoveredPages} truncated={stream.truncated} pages={stream.pages} pageOrder={stream.pageOrder} rollup={stream.rollup} stoppedEarly={stream.stoppedEarly} error={stream.error} onRetry={stream.retry} onRetryFailed={stream.retryFailedPages} retryingFailed={stream.retryingFailed} />
       <SavedAuditActions saved={saved} />
     </>
   );

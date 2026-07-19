@@ -118,7 +118,7 @@ export type { Lens, ScoreBreakdown, SignalId, DetSignalResult, RubSignalResult }
 // are unaffected by anything below. See docs/DATA-CONTRACT.md §7.
 // -----------------------------------------------------------------------------
 
-export type DiscoveryMethod = "sitemap" | "crawl";
+export type DiscoveryMethod = "sitemap" | "crawl" | "retry";
 
 export interface DiscoveredPageInfo {
   url: string;

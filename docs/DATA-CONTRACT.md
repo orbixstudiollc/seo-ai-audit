@@ -180,10 +180,16 @@ POST /api/audit/bulk
 Content-Type: application/json
 
 { "url": "https://example.com", "limit": 500 }
+
+// Failed-page retry: skips discovery and audits only these URLs.
+{ "url": "https://example.com", "pages": ["https://example.com/failed-page"] }
 ```
 
 - `url`: same validation as §1. `limit`: optional, 1–500 (`DISCOVERY_HARD_MAX`),
   defaults to 500 (`DISCOVERY_DEFAULT_LIMIT`).
+- `pages`: optional failed-page retry list, 1–500 unique same-origin URLs.
+  When present, `limit` must be omitted; sitemap/link discovery is skipped and
+  only these URLs enter the bounded page-audit queue.
 - Rate limited per IP (stricter than §1 — a crawl audits up to 500 pages, each
   spending 2 LLM calls) and limited to one concurrent crawl per IP. Over
   either limit → HTTP 429 JSON `{ "error": "rate_limit" | "concurrent_site_limit", ... }`.
@@ -194,7 +200,7 @@ Content-Type: application/json
 // lib/audit/types.ts — additive; AuditStreamEvent itself is untouched.
 export type SiteAuditStreamEvent =
   | { type: "site:discovery-start"; rootUrl: string }
-  | { type: "site:discovery-done"; rootUrl: string; method: "sitemap" | "crawl";
+  | { type: "site:discovery-done"; rootUrl: string; method: "sitemap" | "crawl" | "retry";
       pages: DiscoveredPageInfo[]; truncated: boolean }
   | { type: "site:page-start"; url: string; index: number; total: number }
   | { type: "site:page-event"; url: string; index: number; event: AuditStreamEvent }
@@ -217,7 +223,7 @@ Event order: `site:discovery-start` → `site:discovery-done` → interleaved
 the crawl fails outright (bad root URL, zero pages found).
 
 ```ts
-export interface DiscoveredPageInfo { url: string; source: "sitemap" | "crawl"; }
+export interface DiscoveredPageInfo { url: string; source: "sitemap" | "crawl" | "retry"; }
 
 export interface SiteRollup {
   pagesAudited: number;

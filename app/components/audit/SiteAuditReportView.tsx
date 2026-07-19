@@ -34,6 +34,8 @@ type Props = {
   stoppedEarly: StoppedEarlyInfo | null;
   error: StreamError | null;
   onRetry: () => void;
+  onRetryFailed?: () => void;
+  retryingFailed?: boolean;
 };
 
 const SITE_ERROR_LABEL: Record<SiteErrorKind, string> = {
@@ -67,9 +69,11 @@ function overallScore(page: PageRunState | undefined): number | null {
  * single-URL audit of that same page.
  */
 export function SiteAuditReportView(props: Props) {
-  const { phase, rootUrl, method, discoveredPages, truncated, pages, pageOrder, rollup, stoppedEarly, error, onRetry } = props;
+  const { phase, rootUrl, method, discoveredPages, truncated, pages, pageOrder, rollup, stoppedEarly, error, onRetry, onRetryFailed, retryingFailed = false } = props;
   const [openPageUrl, setOpenPageUrl] = useState<string | null>(null);
   const router = useRouter();
+  const failedPageCount = pageOrder.filter((url) => pages[url]?.phase === "error").length;
+  const canRetryFailed = phase === "done" || phase === "error";
 
   if (openPageUrl) {
     const page = pages[openPageUrl];
@@ -129,10 +133,20 @@ export function SiteAuditReportView(props: Props) {
           label={`Pages (${discoveredPages.length}${truncated ? "+" : ""})`}
           aside={
             <span className="font-mono text-[10px] uppercase tracking-wider text-text-3">
-              {method === "sitemap" ? "via sitemap" : "via link crawl"}
+              {method === "sitemap" ? "via sitemap" : method === "retry" ? "failed-page retry" : "via link crawl"}
             </span>
           }
         >
+          {canRetryFailed && failedPageCount > 0 && onRetryFailed && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-2 px-3.5 py-3">
+              <p className="text-xs text-text-2">
+                {failedPageCount} failed page{failedPageCount === 1 ? "" : "s"}. Successful pages will not be charged or rerun.
+              </p>
+              <Button size="sm" variant="outline" onClick={onRetryFailed} disabled={retryingFailed}>
+                {retryingFailed ? "Retrying failed pages…" : `Retry ${failedPageCount} failed page${failedPageCount === 1 ? "" : "s"}`}
+              </Button>
+            </div>
+          )}
           <ul className="divide-y divide-line">
             {pageOrder.map((url) => {
               const page = pages[url];

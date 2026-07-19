@@ -187,3 +187,122 @@ test("retries one failed bulk page without rerunning the whole site", async ({ p
   await expect(page.getByRole("heading", { name: "Fixture Page A" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Answer-first intro", { exact: true })).toBeVisible();
 });
+
+test("retries every failed page in one click without rerunning successful pages", async ({ page }) => {
+  const rootUrl = `${server.baseUrl}/`;
+  const goodUrl = `${server.baseUrl}/page-a`;
+  const failedUrls = [`${server.baseUrl}/page-b`, `${server.baseUrl}/missing`];
+  const discovered = [goodUrl, ...failedUrls].map((url) => ({ url, source: "sitemap" }));
+  const initialEvents = [
+    { type: "site:discovery-start", rootUrl },
+    { type: "site:discovery-done", rootUrl, method: "sitemap", pages: discovered, truncated: false },
+    { type: "site:page-start", url: goodUrl, index: 0, total: 3 },
+    { type: "site:page-event", url: goodUrl, index: 0, event: { type: "done" } },
+    { type: "site:page-done", url: goodUrl, index: 0, status: "ok" },
+    ...failedUrls.flatMap((url, offset) => [
+      { type: "site:page-start", url, index: offset + 1, total: 3 },
+      { type: "site:page-event", url, index: offset + 1, event: { type: "error", kind: "server", message: "Fixture failure." } },
+      { type: "site:page-done", url, index: offset + 1, status: "error" },
+    ]),
+    { type: "site:rollup", rollup: { pagesAudited: 1, pagesFailed: 2, avgScores: null, worstPages: [], commonFindings: [] }, stoppedEarly: null },
+    { type: "site:done" },
+  ];
+  const retryEvents = [
+    { type: "site:discovery-start", rootUrl },
+    { type: "site:discovery-done", rootUrl, method: "retry", pages: failedUrls.map((url) => ({ url, source: "retry" })), truncated: false },
+    ...failedUrls.flatMap((url, index) => [
+      { type: "site:page-start", url, index, total: 2 },
+      { type: "site:page-event", url, index, event: { type: "done" } },
+      { type: "site:page-done", url, index, status: "ok" },
+    ]),
+    { type: "site:rollup", rollup: { pagesAudited: 2, pagesFailed: 0, avgScores: null, worstPages: [], commonFindings: [] }, stoppedEarly: null },
+    { type: "site:done" },
+  ];
+  const requests: Array<{ url: string; pages?: string[] }> = [];
+
+  await page.route("/api/audit/bulk", async (route) => {
+    const body = await route.request().postDataJSON() as { url: string; pages?: string[] };
+    requests.push(body);
+    const events = body.pages ? retryEvents : initialEvents;
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") });
+  });
+
+  await page.goto(`/audit/site?url=${encodeURIComponent(rootUrl)}`);
+  const retryFailed = page.getByRole("button", { name: "Retry 2 failed pages", exact: true });
+  await expect(retryFailed).toBeVisible();
+  await retryFailed.click();
+
+  await expect(page.getByText("Done")).toHaveCount(3);
+  await expect(retryFailed).toHaveCount(0);
+  expect(requests).toHaveLength(2);
+  expect(requests[1]?.pages).toEqual(failedUrls);
+  expect(requests[1]?.pages).not.toContain(goodUrl);
+});
+
+test("retries failed pages from a reopened report and persists the merged report", async ({ page }) => {
+  const rootUrl = `${server.baseUrl}/`;
+  const goodUrl = `${server.baseUrl}/page-a`;
+  const failedUrl = `${server.baseUrl}/page-b`;
+  const id = `site:${rootUrl}:saved-retry`;
+
+  await page.goto("/");
+  await page.evaluate(async ({ id, rootUrl, goodUrl, failedUrl }) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("seo-ai-audit:reports", 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("reports", { keyPath: "id" });
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction("reports", "readwrite");
+      transaction.objectStore("reports").put({
+        version: 1,
+        id,
+        kind: "site",
+        createdAt: "2026-07-20T00:00:00.000Z",
+        phase: "done",
+        state: {
+          rootUrl,
+          method: "sitemap",
+          discoveredPages: [{ url: goodUrl, source: "sitemap" }, { url: failedUrl, source: "sitemap" }],
+          truncated: false,
+          pages: {
+            [goodUrl]: { phase: "done", url: goodUrl, index: 0, page: null, signals: null, scores: null, findings: null, rewrites: null, error: null },
+            [failedUrl]: { phase: "error", url: failedUrl, index: 1, page: null, signals: null, scores: null, findings: null, rewrites: null, error: { kind: "server", message: "Fixture failure." } },
+          },
+          pageOrder: [goodUrl, failedUrl],
+          rollup: { pagesAudited: 1, pagesFailed: 1, avgScores: null, worstPages: [], commonFindings: [] },
+          stoppedEarly: null,
+          error: null,
+        },
+      });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  }, { id, rootUrl, goodUrl, failedUrl });
+
+  let retryBody: { url: string; pages?: string[] } | null = null;
+  await page.route("/api/audit/bulk", async (route) => {
+    retryBody = await route.request().postDataJSON() as { url: string; pages?: string[] };
+    const events = [
+      { type: "site:discovery-start", rootUrl },
+      { type: "site:discovery-done", rootUrl, method: "retry", pages: [{ url: failedUrl, source: "retry" }], truncated: false },
+      { type: "site:page-start", url: failedUrl, index: 0, total: 1 },
+      { type: "site:page-event", url: failedUrl, index: 0, event: { type: "done" } },
+      { type: "site:page-done", url: failedUrl, index: 0, status: "ok" },
+      { type: "site:rollup", rollup: { pagesAudited: 1, pagesFailed: 0, avgScores: null, worstPages: [], commonFindings: [] }, stoppedEarly: null },
+      { type: "site:done" },
+    ];
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") });
+  });
+
+  await page.goto(`/report/${encodeURIComponent(id)}`);
+  await page.getByRole("button", { name: "Retry 1 failed page", exact: true }).click();
+  await expect(page.getByText("Done")).toHaveCount(2);
+  expect(retryBody).toEqual({ url: rootUrl, pages: [failedUrl] });
+
+  await page.reload();
+  await expect(page.getByText("Done")).toHaveCount(2);
+  await expect(page.getByRole("button", { name: /Retry 1 failed page/ })).toHaveCount(0);
+});

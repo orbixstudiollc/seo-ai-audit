@@ -47,11 +47,11 @@ function forwardFetchToTestServer(server: TestServer): void {
 }
 
 let ipSeq = 0;
-function bulkRequest(url: string, ip = `10.1.0.${++ipSeq}`, limit?: number): Request {
+function bulkRequest(url: string, ip = `10.1.0.${++ipSeq}`, limit?: number, pages?: string[]): Request {
   return new Request("http://localhost/api/audit/bulk", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": ip },
-    body: JSON.stringify({ url, ...(limit !== undefined ? { limit } : {}) }),
+    body: JSON.stringify({ url, ...(limit !== undefined ? { limit } : {}), ...(pages ? { pages } : {}) }),
   });
 }
 
@@ -133,6 +133,30 @@ describe("POST /api/audit/bulk — link-crawl fallback", () => {
       [`${ROOT_ORIGIN}/`, `${ROOT_ORIGIN}/only`].sort(),
     );
     expect(findEvent(events, "site:rollup")?.rollup.pagesAudited).toBe(2);
+  });
+});
+
+describe("POST /api/audit/bulk — failed-page retry", () => {
+  it("audits only the supplied same-origin pages without running discovery", async () => {
+    forwardFetchToTestServer(sitemapServer);
+    const retryPages = [`${ROOT_ORIGIN}/a`, `${ROOT_ORIGIN}/b`, `${ROOT_ORIGIN}/a`];
+    const res = await POST(bulkRequest(`${ROOT_ORIGIN}/`, undefined, undefined, retryPages));
+    const events = await collectSiteSse(res);
+
+    const discoveryDone = findEvent(events, "site:discovery-done");
+    expect(discoveryDone?.method).toBe("retry");
+    expect(discoveryDone?.pages.map((page) => page.url).sort()).toEqual(
+      [`${ROOT_ORIGIN}/a`, `${ROOT_ORIGIN}/b`].sort(),
+    );
+    expect(events.filter((event) => event.type === "site:page-start")).toHaveLength(2);
+    expect(findEvent(events, "site:rollup")?.rollup.pagesAudited).toBe(2);
+    expect(findEvent(events, "site:error")).toBeUndefined();
+  });
+
+  it("rejects retry URLs from a different origin before streaming", async () => {
+    const res = await POST(bulkRequest(`${ROOT_ORIGIN}/`, undefined, undefined, ["https://other.example/page"]));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({ error: "invalid_url" });
   });
 });
 

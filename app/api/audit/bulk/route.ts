@@ -13,7 +13,7 @@ import {
   runConcurrentQueue,
 } from "@/lib/audit/siteGuards";
 import { computeSiteRollup, type PageAuditResult } from "@/lib/audit/siteRollup";
-import type { AuditFindings, AuditStreamEvent, PageMeta, ScoreBreakdown, SiteAuditStreamEvent } from "@/lib/audit/types";
+import type { AuditFindings, AuditStreamEvent, DiscoveredPageInfo, PageMeta, ScoreBreakdown, SiteAuditStreamEvent } from "@/lib/audit/types";
 
 /**
  * POST /api/audit/bulk — anonymous, stateless whole-site audit (docs/DATA-CONTRACT.md
@@ -44,6 +44,10 @@ const PAGE_FETCH_TIMEOUT_MS = 15_000;
 const bodySchema = z.object({
   url: z.string(),
   limit: z.number().int().min(1).max(DISCOVERY_HARD_MAX).optional(),
+  pages: z.array(z.string().min(1).max(2048)).min(1).max(DISCOVERY_HARD_MAX).optional(),
+}).refine((body) => body.pages === undefined || body.limit === undefined, {
+  message: "Use either discovery limit or explicit retry pages.",
+  path: ["pages"],
 });
 
 // -----------------------------------------------------------------------------
@@ -142,20 +146,23 @@ async function runOnePage(
 async function runSiteAudit(
   rootUrl: string,
   limit: number | undefined,
+  requestedPages: { url: string; source: "retry" }[] | undefined,
   write: (event: SiteAuditStreamEvent) => void,
   signal: AbortSignal,
 ): Promise<void> {
   write({ type: "site:discovery-start", rootUrl });
 
-  const discovery = await discoverPages(rootUrl, { limit, signal }).catch((err: unknown) => {
-    const invalidUrl = err instanceof ImportError && err.kind === "blocked";
-    write({
-      type: "site:error",
-      kind: invalidUrl ? "invalid_url" : "server",
-      message: err instanceof ImportError ? err.message : "Could not discover pages on this site.",
-    });
-    return null;
-  });
+  const discovery = requestedPages
+    ? { rootUrl, method: "retry" as const, pages: requestedPages, truncated: false }
+    : await discoverPages(rootUrl, { limit, signal }).catch((err: unknown) => {
+        const invalidUrl = err instanceof ImportError && err.kind === "blocked";
+        write({
+          type: "site:error",
+          kind: invalidUrl ? "invalid_url" : "server",
+          message: err instanceof ImportError ? err.message : "Could not discover pages on this site.",
+        });
+        return null;
+      });
   if (discovery === null) return;
 
   if (discovery.pages.length === 0) {
@@ -173,12 +180,13 @@ async function runSiteAudit(
 
   if (signal.aborted) return;
 
+  const pages: DiscoveredPageInfo[] = discovery.pages;
   const budget = createSiteBudget(SITE_WALL_CLOCK_BUDGET_MS);
   const results: PageAuditResult[] = [];
 
-  const { stoppedEarly } = await runConcurrentQueue(discovery.pages, SITE_MAX_CONCURRENCY, budget, async (page, index) => {
+  const { stoppedEarly } = await runConcurrentQueue(pages, SITE_MAX_CONCURRENCY, budget, async (page, index) => {
     if (signal.aborted) return;
-    write({ type: "site:page-start", url: page.url, index, total: discovery.pages.length });
+    write({ type: "site:page-start", url: page.url, index, total: pages.length });
     const outcome = await runOnePage(page.url, index, write, signal);
     results[index] = outcome;
     write({ type: "site:page-done", url: page.url, index, status: outcome.status });
@@ -187,7 +195,7 @@ async function runSiteAudit(
   const completed = results.filter((r): r is PageAuditResult => r !== undefined);
   const rollup = computeSiteRollup(completed);
   const stoppedEarlyInfo = stoppedEarly
-    ? { reason: "budget" as const, pagesRemaining: discovery.pages.length - completed.length }
+    ? { reason: "budget" as const, pagesRemaining: pages.length - completed.length }
     : null;
   write({ type: "site:rollup", rollup, stoppedEarly: stoppedEarlyInfo });
   write({ type: "site:done" });
@@ -237,9 +245,26 @@ export async function POST(req: Request): Promise<Response> {
     return jsonError(400, { error: "invalid_url", message: "That doesn't look like a valid http(s) URL." });
   }
 
+  let requestedPages: { url: string; source: "retry" }[] | undefined;
+  if (parsedBody.data.pages) {
+    const unique = new Map<string, { url: string; source: "retry" }>();
+    for (const value of parsedBody.data.pages) {
+      const pageUrl = parseAuditUrl(value);
+      if (!pageUrl || pageUrl.origin !== targetUrl.origin) {
+        releaseCrawlSlot(ip);
+        return jsonError(400, {
+          error: "invalid_url",
+          message: "Retry pages must be valid URLs from the audited site.",
+        });
+      }
+      unique.set(pageUrl.href, { url: pageUrl.href, source: "retry" });
+    }
+    requestedPages = [...unique.values()];
+  }
+
   return createSseResponse(formatSiteAuditEvent, async (write, signal) => {
     try {
-      await runSiteAudit(submittedUrl, parsedBody.data.limit, write, signal);
+      await runSiteAudit(targetUrl.href, parsedBody.data.limit, requestedPages, write, signal);
     } finally {
       releaseCrawlSlot(ip);
     }

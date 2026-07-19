@@ -38,8 +38,9 @@ Every submitted query is cached locally and synchronized to private Supabase
 tables through server-only routes.
 Completed reports can be reopened from cloud or IndexedDB; the dashboard
 supports 500 records and paginates 10 cards at a time. Failed bulk pages can be
-retried individually. The ownership migration passed a rollback-only production
-database test. Current gates: lint/typecheck/build, 270 tests, and 22
+retried individually or all at once without rerunning successful pages or site
+discovery. The ownership migration passed a rollback-only production
+database test. Current gates: lint/typecheck/build, 273 tests, and 24
 Playwright journeys.
 Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM cost.
 
