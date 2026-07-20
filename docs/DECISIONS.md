@@ -92,3 +92,11 @@ propose; the coordinator records.
   production data (audit_runs, reports, ledger, Google tokens coming), a
   runnable full-schema wipe in the repo is pure hazard. Recoverable from git
   history if ever legitimately needed.
+- **D-020** 2026-07-20 — **Tracked-site fairness + capacity.** The snapshot
+  queue serves never-run sites LAST (existing sites' daily cadence survives
+  registration floods from mintable owners) and tracked-site registration has
+  a deployment-wide 500-site ceiling (durable control; per-owner caps alone
+  cannot bound growth when owner tokens are free to mint). Residuals accepted
+  and documented in docs/phases/g2-tracked-snapshots-report.md: the
+  audit_required gate is UX-not-security (PUT /api/history bypass), and the
+  account-claim merge may exceed the per-owner limit.

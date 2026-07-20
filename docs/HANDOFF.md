@@ -691,3 +691,21 @@ User actions still open: push main, apply migration 202607200004 BEFORE any
 deploy, then deploy.
 
 CONTEXT: growth components read-only over history; History tab owns writes.
+
+## 2026-07-20 · G2 tracked sites + daily snapshots (multi-agent pipeline) · wsp-growth-2 → main
+
+DONE: Full 5-stage pipeline: §13 contract + migration 202607200005 (stage 0),
+2 parallel worktree build agents (api ∥ ui, zero conflicts), converge, 3
+adversarial reviewers (security/design/coverage), all findings fixed via 2
+more parallel test agents + coordinator fixes (nulls-last fairness, 500-site
+capacity gate, idempotent re-track, midnight day-key, a11y polish, orphan-
+tracked card). Gates: 356/356 unit, 39/39 e2e. Report:
+docs/phases/g2-tracked-snapshots-report.md; D-020 recorded.
+
+NEXT: (1) user pushes main; (2) BEFORE deploy: apply migration 202607200005
+in Supabase + set CRON_SECRET in Vercel; (3) deploy + D-007 verify (growth
+tab tracking toggles live; hit /api/cron/snapshots once with the secret to
+smoke the collector); (4) next phase per plan: G3 site hub + skills.
+
+CONTEXT: cron schedule 0 3 * * * UTC in vercel.json; free DET-only (D-019);
+capacity + fairness rationale in D-020.
