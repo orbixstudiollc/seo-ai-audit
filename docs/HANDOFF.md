@@ -655,3 +655,23 @@ DEPLOYED: W5 is live — deployment `seo-ai-audit-a2zs7oks9` (Ready, 40s
 build). D-007 verified: `/` HTTP 200 with real hero HTML, `/robots.txt` 200,
 and the "Action plan" component confirmed present in the served /audit route
 chunk (`24ta7n7bowfrz.js`).
+
+## 2026-07-20 · F2-BUDGET (coordinator, step-by-step) · wsp-budget → main
+
+DONE: Spend gate live in code: migration 202607200004 (request_fingerprint
+idempotency + reserve_spend/cancel_spend RPCs + claim-RPC updated atomically),
+lib/providers/{budget,taskStore}.ts extracted from the technical-audit route
+(reservation-delete race fixed — delete by primary key), per-IP rate limit
+added to POST /api/technical-audit (had NONE), budget_exceeded per §8.
+No budgets table — caps are env (PROVIDER_OWNER_DAILY_USD=1,
+PROVIDER_GLOBAL_DAILY_USD=10, 0=kill switch). Gates: lint/typecheck clean,
+298/298 unit, build, 25/25 e2e. Report: docs/phases/f2-budget-report.md.
+
+NEXT: ⚠️ APPLY MIGRATION BEFORE DEPLOYING (new code is deny-closed without
+the RPC): run supabase/migrations/202607200004_spend_gate.sql in the Supabase
+SQL editor, then deploy + validate one real crawl and one forced cap denial.
+Then: Growth dashboard program G1→G5 per the approved plan
+(~/.claude/plans/shimmying-launching-elephant.md).
+
+CONTEXT: W1-DFS must route every paid call through reserveSpend + taskStore
+(that's the point of F2). Env caps to add in Vercel when convenient.
