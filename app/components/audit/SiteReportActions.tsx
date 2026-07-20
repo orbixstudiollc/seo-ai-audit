@@ -3,16 +3,21 @@
 import { useState } from "react";
 import type { SiteRollup } from "@/lib/audit/types";
 import { LENS_ORDER, LENS_META } from "@/lib/audit/signalMeta";
+import { actionPlanForSite, actionPlanMarkdownLines, type ActionPlan } from "@/lib/skills/actionPlan";
 import { Button } from "@/app/components/ui/Button";
 
 type Props = { rootUrl: string; rollup: SiteRollup };
 
-function markdown(rootUrl: string, rollup: SiteRollup): string {
+function markdown(rootUrl: string, rollup: SiteRollup, plan: ActionPlan): string {
   return [
     `# Site AI-search audit: ${rootUrl}`,
     "",
     `- Pages audited: ${rollup.pagesAudited}`,
     `- Pages failed: ${rollup.pagesFailed}`,
+    "",
+    "## Action plan",
+    "",
+    ...actionPlanMarkdownLines(plan),
     "",
     "## Average scores",
     "",
@@ -41,7 +46,8 @@ function download(filename: string, content: string, type: string) {
 export function SiteReportActions({ rootUrl, rollup }: Props) {
   const [copied, setCopied] = useState(false);
   const host = new URL(rootUrl).hostname.replace(/[^a-z0-9.-]/gi, "-");
-  const report = markdown(rootUrl, rollup);
+  const plan = actionPlanForSite(rootUrl, rollup, new Date().toISOString());
+  const report = markdown(rootUrl, rollup, plan);
   const shareUrl = typeof window === "undefined" ? "" : `${window.location.origin}/audit/site?url=${encodeURIComponent(rootUrl)}`;
   async function copyShare() {
     await navigator.clipboard.writeText(shareUrl);

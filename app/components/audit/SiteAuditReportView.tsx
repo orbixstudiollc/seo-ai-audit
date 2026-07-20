@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   DiscoveredPageInfo,
   DiscoveryMethod,
@@ -14,9 +14,11 @@ import type {
 import type { PageRunState } from "@/app/hooks/useSiteAuditStream";
 import { LENS_META, LENS_ORDER } from "@/lib/audit/signalMeta";
 import { scoreBand } from "@/lib/audit/scoreScale";
+import { actionPlanForSite } from "@/lib/skills/actionPlan";
 import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { ScoreTile } from "@/app/components/ui/ScoreTile";
+import { ActionPlanPanel } from "./ActionPlanPanel";
 import { AuditReportView } from "./AuditReportView";
 import { SiteReportActions } from "./SiteReportActions";
 
@@ -74,6 +76,13 @@ export function SiteAuditReportView(props: Props) {
   const router = useRouter();
   const failedPageCount = pageOrder.filter((url) => pages[url]?.phase === "error").length;
   const canRetryFailed = phase === "done" || phase === "error";
+
+  // Site-level action plan from the rollup's recurring findings + worst pages
+  // (DATA-CONTRACT §10). Rebuilt only when the rollup or root URL changes.
+  const siteActionPlan = useMemo(
+    () => (rollup ? actionPlanForSite(rootUrl ?? "", rollup, new Date().toISOString()) : null),
+    [rollup, rootUrl],
+  );
 
   if (openPageUrl) {
     const page = pages[openPageUrl];
@@ -274,6 +283,8 @@ export function SiteAuditReportView(props: Props) {
           </div>
         </Card>
       )}
+
+      {siteActionPlan && <ActionPlanPanel plan={siteActionPlan} />}
 
       {rollup && rootUrl && <SiteReportActions rootUrl={rootUrl} rollup={rollup} />}
     </div>
