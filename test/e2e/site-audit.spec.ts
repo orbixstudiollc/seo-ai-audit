@@ -120,6 +120,7 @@ test("audits a whole site: discovers a 3-page sitemap, streams per-page results,
   // One site-level history item is saved (not one item per crawled page).
   await expect(page.getByText("Saved to your dashboard on this browser.")).toBeVisible();
   await page.getByRole("link", { name: "View dashboard" }).click();
+  await page.getByRole("navigation", { name: "Dashboard sections" }).getByRole("link", { name: "History" }).click();
   await expect(page.getByText("History (1)", { exact: true })).toBeVisible();
   await expect(page.getByText(/· 3 pages$/)).toBeVisible();
   let technicalStarted = false;

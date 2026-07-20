@@ -9,6 +9,7 @@ import { saveAuditReport } from "@/lib/reports";
 import { loadCloudAuditReport, saveCloudAudit } from "@/lib/cloud/history";
 import { addHistoryRecord, loadHistory, notifyHistoryChanged, storeHistory, type AuditHistoryRecord } from "@/lib/history";
 import { consumeSiteAuditStream, siteAuditStreamReducer, type SiteAuditStreamState } from "@/app/hooks/useSiteAuditStream";
+import type { TechnicalSeoPage } from "@/lib/dataforseo/types";
 import { AuditReportView } from "./AuditReportView";
 import { SiteAuditReportView } from "./SiteAuditReportView";
 import { TechnicalSeoPanel } from "./TechnicalSeoPanel";
@@ -56,6 +57,7 @@ function SavedSiteReportClient({ report }: { report: SavedSiteReport }) {
   const router = useRouter();
   const controllerRef = useRef<AbortController | null>(null);
   const runningRef = useRef(false);
+  const [technicalPages, setTechnicalPages] = useState<TechnicalSeoPage[] | null>(null);
   const [siteState, setSiteState] = useState<SiteAuditStreamState>(() => ({
     phase: report.phase,
     ...report.state,
@@ -131,8 +133,9 @@ function SavedSiteReportClient({ report }: { report: SavedSiteReport }) {
         onRetry={() => router.push(`/audit/site?url=${encodeURIComponent(siteState.rootUrl ?? "")}`)}
         onRetryFailed={retryFailedPages}
         retryingFailed={siteState.retryingFailed}
+        technicalPages={technicalPages}
       />
-      {siteState.rootUrl && <div className="mx-auto w-full max-w-4xl px-4 pb-6 sm:px-6 lg:px-8"><TechnicalSeoPanel auditId={report.id} rootUrl={siteState.rootUrl} limit={500} /></div>}
+      {siteState.rootUrl && <div className="mx-auto w-full max-w-4xl px-4 pb-6 sm:px-6 lg:px-8"><TechnicalSeoPanel auditId={report.id} rootUrl={siteState.rootUrl} limit={500} onPages={setTechnicalPages} /></div>}
     </main>
   );
 }

@@ -675,3 +675,19 @@ Then: Growth dashboard program G1→G5 per the approved plan
 
 CONTEXT: W1-DFS must route every paid call through reserveSpend + taskStore
 (that's the point of F2). Env caps to add in Vercel when convenient.
+
+## 2026-07-20 · G1 growth overview (coordinator) · wsp-growth-1 → main
+
+DONE: /dashboard = Growth (default) + History tabs; per-domain progress cards
+with score deltas, sparklines, needs-attention strip — all client-computed
+from existing history (zero backend). lib/growth/aggregate.ts pure + 8 tests.
+Technical-crawl→action-plan seam wired (issueKeys now in site plans). Gates:
+lint/typecheck ✓, 306/306 unit, build ✓, 30/30 e2e (4 pre-existing specs
+updated for the new default tab). Report: docs/phases/g1-growth-overview-report.md.
+
+NEXT: G2 tracked sites + daily DET snapshots per the approved plan — to run
+under the multi-agent model (.claude/plan/multi-agent-growth-execution.md).
+User actions still open: push main, apply migration 202607200004 BEFORE any
+deploy, then deploy.
+
+CONTEXT: growth components read-only over history; History tab owns writes.
