@@ -74,7 +74,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | W2-GOOGLE | OAuth vault: oauth_states, google_connections (AES-GCM), connect/disconnect, claim-RPC update | Opus | 🧾 queued |
 | W3-SHELL | SkillPanel shell + /dev/mock-skills + agent mode entry stub | Sonnet | 🧾 queued |
 | W4-DET-SKILLS | schema/sitemap/hreflang/images/SXO route+renderer pairs | Sonnet | 🧾 queued (per-skill parallel) |
-| W5-ACTION-PLAN | 4-tier severity synthesizer over existing data (§10) | Sonnet | 🧾 queued (no dependencies — can start now) |
+| W5-ACTION-PLAN | 4-tier severity synthesizer over existing data (§10) | executor + coordinator wrap-up | ✅ done — merged, all gates green (`docs/phases/w5-action-plan-report.md`) |
 | W6–W10 (wave 2) | GSC/GA4 data routes · agent orchestrator · compete/clusters/briefs · insights home · drift | per plan | ⏸ after wave 1 |
 | WS5 bulk upload | spreadsheet → bulk audit (spec `docs/phases/ws5-bulk-upload-spec.md`, needs refresh vs landed bulk API) | Sonnet | ⏸ parked |
 

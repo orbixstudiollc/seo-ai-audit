@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     // They are separate checkouts, not part of this application's source tree.
     ".claude/**",
     ".conductor/**",
+    // Local `vercel build` output — generated launchers, not source.
+    ".vercel/**",
   ]),
 ]);
 

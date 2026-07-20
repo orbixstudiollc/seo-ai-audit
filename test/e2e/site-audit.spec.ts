@@ -88,10 +88,12 @@ test("audits a whole site: discovers a 3-page sitemap, streams per-page results,
   // Every page reaches a terminal "Done" status (mock LLM, so no real spend).
   await expect(page.getByText("Done")).toHaveCount(3, { timeout: 20_000 });
 
-  // The site-level rollup renders once every page has a result.
+  // The site-level rollup renders once every page has a result. Heading-role
+  // scoped: the W5 action plan's item prose can legitimately mention "worst
+  // pages"/"common findings", so bare getByText is ambiguous under strict mode.
   await expect(page.getByText("Site rollup")).toBeVisible();
-  await expect(page.getByText("Worst pages")).toBeVisible();
-  await expect(page.getByText("Common findings")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Worst pages" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Common findings" })).toBeVisible();
 
   // No site-level error banner — the whole crawl completed successfully.
   // ("Run again" only renders inside the error banner; Next.js's own

@@ -628,3 +628,25 @@ REQUIRES the verified bearer path (never device-only); `lib/google/tokens.ts`
 purge on workspace delete. Tokens never in responses/logs. Unit tests with a
 mocked Google token endpoint; SQL test for the claim path. Gates green;
 closing ritual.
+
+## 2026-07-20 · W5-ACTION-PLAN wrap-up (coordinator) · wsp-action-plan → main
+
+DONE: Completed the stalled executor's W5 work per the user's "skip codex"
+instruction. Action-plan synthesizer (`lib/skills/actionPlan.ts`, §10-exact,
+15 unit tests) + `ActionPlanPanel` wired into single-page and site reports +
+exports. Wrap-up fixes: `Card` gained a backwards-compatible `labelAs` prop
+(accessible headings for report sections — future SkillPanels need this);
+site-audit spec assertions scoped to heading roles (strict-mode collision
+with action-plan prose); stale pre-pivot `.vercel/output` removed +
+`.vercel/**` eslint-ignored (was 71 phantom lint errors). ALL GATES GREEN:
+lint, typecheck, 288/288 unit, 25/25 e2e. Report:
+`docs/phases/w5-action-plan-report.md`. Merged to local main.
+
+NEXT: (1) user pushes main; (2) deploy + D-007 verify (action plan appears
+on production reports); (3) next step-by-step workstream — recommended
+order: F2-BUDGET (gates paid features; do NOT ship W1-DFS routes before it),
+then W3-SHELL, then F3-OPS privacy/runbook.
+
+CONTEXT: working step-by-step in this workspace (kinshasa), no separate
+executor sessions for now. Push deny rule on `git push origin main` still
+active — branch pushes are fine.

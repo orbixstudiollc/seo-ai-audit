@@ -71,6 +71,7 @@ export function ActionPlanPanel({ plan }: Props) {
   return (
     <Card
       label="Action plan"
+      labelAs="h3"
       aside={
         count > 0 ? (
           <span className="font-mono text-[10px] uppercase tracking-wider text-text-3">
