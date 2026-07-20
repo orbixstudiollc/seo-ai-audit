@@ -14,7 +14,7 @@ import type {
 import type { PageRunState } from "@/app/hooks/useSiteAuditStream";
 import { LENS_META, LENS_ORDER } from "@/lib/audit/signalMeta";
 import { scoreBand } from "@/lib/audit/scoreScale";
-import { actionPlanForSite } from "@/lib/skills/actionPlan";
+import { actionPlanForSite, type TechnicalIssuePage } from "@/lib/skills/actionPlan";
 import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { ScoreTile } from "@/app/components/ui/ScoreTile";
@@ -38,6 +38,8 @@ type Props = {
   onRetry: () => void;
   onRetryFailed?: () => void;
   retryingFailed?: boolean;
+  /** DataForSEO crawl pages (url + issueKeys) merged into the action plan. */
+  technicalPages?: readonly TechnicalIssuePage[] | null;
 };
 
 const SITE_ERROR_LABEL: Record<SiteErrorKind, string> = {
@@ -71,7 +73,7 @@ function overallScore(page: PageRunState | undefined): number | null {
  * single-URL audit of that same page.
  */
 export function SiteAuditReportView(props: Props) {
-  const { phase, rootUrl, method, discoveredPages, truncated, pages, pageOrder, rollup, stoppedEarly, error, onRetry, onRetryFailed, retryingFailed = false } = props;
+  const { phase, rootUrl, method, discoveredPages, truncated, pages, pageOrder, rollup, stoppedEarly, error, onRetry, onRetryFailed, retryingFailed = false, technicalPages = null } = props;
   const [openPageUrl, setOpenPageUrl] = useState<string | null>(null);
   const router = useRouter();
   const failedPageCount = pageOrder.filter((url) => pages[url]?.phase === "error").length;
@@ -80,8 +82,8 @@ export function SiteAuditReportView(props: Props) {
   // Site-level action plan from the rollup's recurring findings + worst pages
   // (DATA-CONTRACT §10). Rebuilt only when the rollup or root URL changes.
   const siteActionPlan = useMemo(
-    () => (rollup ? actionPlanForSite(rootUrl ?? "", rollup, new Date().toISOString()) : null),
-    [rollup, rootUrl],
+    () => (rollup ? actionPlanForSite(rootUrl ?? "", rollup, new Date().toISOString(), technicalPages) : null),
+    [rollup, rootUrl, technicalPages],
   );
 
   if (openPageUrl) {

@@ -321,8 +321,9 @@ export function actionPlanForSite(
   rootUrl: string,
   rollup: SiteRollup | null,
   generatedAt: string,
+  technicalPages?: readonly TechnicalIssuePage[] | null,
 ): ActionPlan {
-  return buildActionPlan({ generatedAt, url: rootUrl, rollup });
+  return buildActionPlan({ generatedAt, url: rootUrl, rollup, technicalPages });
 }
 
 const SEVERITY_EXPORT_LABEL: Record<ActionSeverity, string> = {

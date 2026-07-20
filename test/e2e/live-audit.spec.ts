@@ -43,6 +43,7 @@ test("pastes a URL and gets a rendered report from a real audit", async ({ page 
   // Completion is recorded locally and survives navigation to the dashboard.
   await expect(page.getByText("Saved to your dashboard on this browser.")).toBeVisible();
   await page.getByRole("link", { name: "View dashboard" }).click();
+  await page.getByRole("navigation", { name: "Dashboard sections" }).getByRole("link", { name: "History" }).click();
   await expect(page.getByRole("heading", { name: "Audit dashboard" })).toBeVisible();
   await expect(page.getByText("Example Domain", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Open report" }).click();

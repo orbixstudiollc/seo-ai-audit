@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { cloudFetch } from "@/lib/cloud/request";
 import type { TechnicalAuditTask } from "@/lib/dataforseo";
+import type { TechnicalSeoPage } from "@/lib/dataforseo/types";
 import { Button } from "@/app/components/ui/Button";
 import { Card } from "@/app/components/ui/Card";
 
@@ -10,6 +11,9 @@ type Props = {
   auditId: string;
   rootUrl: string;
   limit?: number;
+  /** Fires whenever crawl results are available, so the parent can feed
+   *  technical issue pages into the site action plan. */
+  onPages?: (pages: TechnicalSeoPage[]) => void;
 };
 
 const PAGE_SIZE = 25;
@@ -18,13 +22,18 @@ function labelIssue(key: string): string {
   return key.replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
 }
 
-export function TechnicalSeoPanel({ auditId, rootUrl, limit = 500 }: Props) {
+export function TechnicalSeoPanel({ auditId, rootUrl, limit = 500, onPages }: Props) {
   const [task, setTask] = useState<TechnicalAuditTask | null>(null);
   const [ready, setReady] = useState(false);
   const [configured, setConfigured] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const resultPages = task?.result?.pages;
+    if (resultPages && resultPages.length > 0) onPages?.(resultPages);
+  }, [task, onPages]);
 
   const load = useCallback(async () => {
     try {
