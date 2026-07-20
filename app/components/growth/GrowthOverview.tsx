@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HISTORY_CHANGED_EVENT,
   loadHistory,
@@ -13,6 +13,8 @@ import { loadCloudHistory } from "@/lib/cloud/history";
 import { ACCOUNT_OWNER_CHANGED_EVENT } from "@/lib/auth/events";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { groupByDomain, needsAttention, summarize } from "@/lib/growth/aggregate";
+import { fetchGrowthSeries, listTrackedSites } from "@/lib/growth/client";
+import type { GrowthSnapshot } from "@/lib/growth/types";
 import { scoreBand } from "@/lib/audit/scoreScale";
 import { Card } from "@/app/components/ui/Card";
 import { SiteGrowthCard } from "./SiteGrowthCard";
@@ -36,6 +38,35 @@ export function GrowthOverview() {
   const [records, setRecords] = useState<AuditHistoryRecord[]>([]);
   const [ready, setReady] = useState(false);
   const { settings } = useLocalSettings();
+  // G2 tracking state. null = API absent/erroring → render exactly the G1
+  // surface (no toggles, per-audit sparklines). Never blocks first paint.
+  const [trackedUrls, setTrackedUrls] = useState<ReadonlySet<string> | null>(null);
+  const [dailySeries, setDailySeries] = useState<Record<string, GrowthSnapshot[]>>({});
+  const requestedSeries = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let active = true;
+    void listTrackedSites().then((result) => {
+      if (active && result.ok) setTrackedUrls(new Set(result.data.map((site) => site.url)));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!trackedUrls) return;
+    for (const url of trackedUrls) {
+      if (requestedSeries.current.has(url)) continue;
+      requestedSeries.current.add(url);
+      // No cancellation: each url is fetched once and a late setState after
+      // unmount is a safe no-op in React 19.
+      void fetchGrowthSeries(url).then((result) => {
+        if (!result.ok || result.data.series.length === 0) return;
+        setDailySeries((prev) => ({ ...prev, [url]: result.data.series }));
+      });
+    }
+  }, [trackedUrls]);
 
   useEffect(() => {
     let active = true;
@@ -150,9 +181,30 @@ export function GrowthOverview() {
 
           <section aria-label="Sites">
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {groups.map((group) => (
-                <SiteGrowthCard key={group.domain} group={group} />
-              ))}
+              {groups.map((group) => {
+                if (trackedUrls === null) return <SiteGrowthCard key={group.domain} group={group} />;
+                const trackUrl =
+                  group.records.map((record) => record.url).find((url) => trackedUrls.has(url)) ??
+                  group.latest.url;
+                return (
+                  <SiteGrowthCard
+                    key={group.domain}
+                    group={group}
+                    tracking={{
+                      url: trackUrl,
+                      tracked: trackedUrls.has(trackUrl),
+                      series: dailySeries[trackUrl] ?? null,
+                      onTrackedChange: (tracked) =>
+                        setTrackedUrls((prev) => {
+                          const next = new Set(prev ?? []);
+                          if (tracked) next.add(trackUrl);
+                          else next.delete(trackUrl);
+                          return next;
+                        }),
+                    }}
+                  />
+                );
+              })}
             </ul>
           </section>
 
