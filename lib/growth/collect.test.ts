@@ -65,6 +65,15 @@ describe("dueSites", () => {
     const tracked = chain({ data: null, error: { message: "down" } });
     await expect(dueSites(db(() => tracked), new Date(), 25)).rejects.toThrow("tracked_sites_read_failed");
   });
+
+  // REGRESSION PIN (security review G2): never-run sites must order LAST so a
+  // burst of fresh registrations cannot starve existing sites' daily cadence.
+  it("pins the exact order options: ascending with nulls last", async () => {
+    const tracked = chain({ data: [], error: null });
+    await dueSites(db(() => tracked), new Date("2026-07-20T15:00:00.000Z"), 25);
+    expect(tracked.order).toHaveBeenCalledTimes(1);
+    expect(tracked.order.mock.calls[0]).toEqual(["last_run_at", { ascending: true, nullsFirst: false }]);
+  });
 });
 
 describe("claimSite", () => {
@@ -121,7 +130,11 @@ describe("snapshotSite", () => {
     const upserted = snapshots.upsert.mock.calls[0][0] as Record<string, unknown>;
     expect(Object.keys(upserted.det_scores as Record<string, number>).sort()).toEqual([...DET_SIGNAL_IDS].sort());
     for (const value of Object.values(upserted.det_scores as Record<string, number>)) {
-      expect(typeof value).toBe("number");
+      // §13 producer invariant: every det score is an integer 0..100 on the 5-point grid.
+      expect(Number.isInteger(value)).toBe(true);
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(100);
+      expect(value % 5).toBe(0);
     }
     expect(upserted.lens_estimate).toBeNull();
     expect(upserted.signals_version).toBe(SIGNALS_VERSION);
@@ -140,6 +153,44 @@ describe("snapshotSite", () => {
     await snapshotSite(second.client, "o", "https://a.com/", now);
     const unchangedRow = second.snapshots.upsert.mock.calls[0][0] as Record<string, unknown>;
     expect(unchangedRow.fetch_meta).toEqual({});
+  });
+
+  it("flags changed across an error-day gap: null-hash days are filtered out of the prior-hash query", async () => {
+    mocks.fetchArticle.mockResolvedValue({ title: "Hello", html: HTML, finalUrl: "https://a.com/" });
+    // The maybeSingle result models the OLDER non-null row surviving the
+    // filters: yesterday's row has content_hash null (fetch error), so the
+    // query — which excludes null hashes and days >= today — must return the
+    // older, differing hash, and that comparison still yields changed:true.
+    const { client, snapshots } = successDb({ prevHash: "0".repeat(64) });
+    await snapshotSite(client, "o", "https://a.com/", now);
+    expect(snapshots.not).toHaveBeenCalledWith("content_hash", "is", null);
+    expect(snapshots.lt).toHaveBeenCalledWith("captured_on", "2026-07-20");
+    const row = snapshots.upsert.mock.calls[0][0] as Record<string, unknown>;
+    expect(row.fetch_meta).toEqual({ changed: true });
+  });
+
+  it("blends lens from a site-kind report when the url's page carries full RUB signals", async () => {
+    mocks.fetchArticle.mockResolvedValue({ title: "Hello", html: HTML, finalUrl: "https://a.com/" });
+    const withSite = successDb({
+      prevHash: null,
+      payload: { kind: "site", state: { pages: { "https://a.com/": { scores: { signals: rubSignals } } } } },
+    });
+    await snapshotSite(withSite.client, "o", "https://a.com/", now);
+    const row = withSite.snapshots.upsert.mock.calls[0][0] as { lens_estimate: Record<string, number> };
+    expect(row.lens_estimate).not.toBeNull();
+    expect(Object.keys(row.lens_estimate).sort()).toEqual([...LENSES].sort());
+    for (const lens of LENSES) expect(typeof row.lens_estimate[lens]).toBe("number");
+  });
+
+  it("keeps lens null when a site-kind report is missing this url's page", async () => {
+    mocks.fetchArticle.mockResolvedValue({ title: "Hello", html: HTML, finalUrl: "https://a.com/" });
+    const withOtherPage = successDb({
+      prevHash: null,
+      payload: { kind: "site", state: { pages: { "https://other.com/": { scores: { signals: rubSignals } } } } },
+    });
+    await snapshotSite(withOtherPage.client, "o", "https://a.com/", now);
+    const row = withOtherPage.snapshots.upsert.mock.calls[0][0] as { lens_estimate: unknown };
+    expect(row.lens_estimate).toBeNull();
   });
 
   it("blends a lens estimate only when the latest report carries full RUB signals", async () => {
