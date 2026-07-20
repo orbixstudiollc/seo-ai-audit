@@ -3,7 +3,20 @@ import { LENS_META, LENS_ORDER } from "@/lib/audit/signalMeta";
 import { scoreBand } from "@/lib/audit/scoreScale";
 import { averageScore } from "@/lib/history";
 import type { DomainGroup } from "@/lib/growth/aggregate";
+import { seriesScores } from "@/lib/growth/series";
+import type { GrowthSnapshot } from "@/lib/growth/types";
 import { TrendSparkline } from "./TrendSparkline";
+import { TrackToggle } from "./TrackToggle";
+
+/** G2 tracking state for one card; omitted entirely → exact G1 rendering. */
+export interface SiteTracking {
+  /** Exact url the tracked-sites/growth routes key on. */
+  url: string;
+  tracked: boolean;
+  /** Resolved §13 daily series (null until fetched — never blocks paint). */
+  series: GrowthSnapshot[] | null;
+  onTrackedChange: (tracked: boolean) => void;
+}
 
 /** Delta chip: direction glyph + signed number, score-scale colors with text. */
 function DeltaChip({ delta }: { delta: number | null }) {
@@ -26,12 +39,18 @@ function DeltaChip({ delta }: { delta: number | null }) {
   );
 }
 
-export function SiteGrowthCard({ group }: { group: DomainGroup }) {
+export function SiteGrowthCard({ group, tracking }: { group: DomainGroup; tracking?: SiteTracking }) {
   const overall = averageScore(group.latest);
   const rerun =
     group.latest.mode === "site"
       ? `/audit/site?url=${encodeURIComponent(group.latest.url)}`
       : `/audit?url=${encodeURIComponent(group.latest.url)}`;
+  // Prefer the daily §13 snapshot series once it resolves; fall back to the
+  // G1 per-audit series so the card renders identically without the API.
+  const dailySeries = tracking?.tracked ? tracking.series : null;
+  const daily = dailySeries ? seriesScores(dailySeries) : [];
+  const sparkSeries = daily.length >= 2 ? daily : group.series;
+  const newest = dailySeries ? dailySeries[dailySeries.length - 1] : undefined;
 
   return (
     <li className="flex flex-col overflow-hidden rounded-[var(--radius-lg,5px)] border border-line-strong bg-surface-1 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
@@ -56,9 +75,30 @@ export function SiteGrowthCard({ group }: { group: DomainGroup }) {
         </div>
       </div>
 
-      {group.series.length >= 2 && (
+      {sparkSeries.length >= 2 && (
         <div className="px-4 pb-1">
-          <TrendSparkline series={group.series} />
+          <TrendSparkline series={sparkSeries} noun={daily.length >= 2 ? "days" : "audits"} />
+        </div>
+      )}
+
+      {dailySeries && daily.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-2">
+          {/* Same count the sparkline announces (scored days only) — the
+              caption and aria-label must never disagree for SR users. */}
+          <span className="font-mono text-[10px] uppercase tracking-wider text-text-3">
+            {daily.length} snapshot day{daily.length === 1 ? "" : "s"}
+          </span>
+          {newest?.changed && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-text-1"
+              style={{ backgroundColor: "var(--score-mid-tint)" }}
+            >
+              <span aria-hidden="true" style={{ color: "var(--score-mid)" }}>
+                ■
+              </span>
+              Page changed — run a full audit
+            </span>
+          )}
         </div>
       )}
 
@@ -79,6 +119,16 @@ export function SiteGrowthCard({ group }: { group: DomainGroup }) {
               </strong>
             </div>
           ))}
+        </div>
+      )}
+
+      {tracking && (
+        <div className="border-t border-line px-4 py-2">
+          <TrackToggle
+            url={tracking.url}
+            tracked={tracking.tracked}
+            onTrackedChange={tracking.onTrackedChange}
+          />
         </div>
       )}
 

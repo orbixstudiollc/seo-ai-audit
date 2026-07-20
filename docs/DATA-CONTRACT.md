@@ -405,3 +405,54 @@ export interface Insights {
 
 Mocks: `lib/audit/mockInsights.ts`, `lib/audit/mockAgentRun.ts` (W-owners per
 plan). Contract changes to §8–§12 go through the coordinator, same rule as §1–§7.
+
+## 13. Growth tracking (v1.3, additive — G2, 2026-07-20)
+
+Daily-progress data for tracked sites. Producer: the snapshot collector
+(cron) + tracked-sites routes (g2-api). Consumer: the Growth tab (g2-ui).
+Tables land in migration `202607200005_growth_tracking.sql`.
+
+```ts
+// lib/growth/types.ts
+export interface TrackedSite {
+  url: string;
+  createdAt: string;
+  lastRunAt: string | null;
+}
+// GET  /api/tracked-sites            → { sites: TrackedSite[] }        (owner-authed)
+// POST /api/tracked-sites { url }    → 201 { site }
+//   errors: 400 invalid_url (zod or SSRF-unsafe) · 404 audit_required
+//   (owner has no audit_runs row for that url) · 409 limit_reached
+//   (>10 per owner) · 429 rate_limit
+// DELETE /api/tracked-sites { url }  → { ok: true }                    (idempotent)
+
+/** One day of one tracked site. Compact: score-only, detail stripped. */
+export interface GrowthSnapshot {
+  d: string;                                  // captured_on, YYYY-MM-DD (UTC)
+  det: Record<DetSignalId, number> | null;    // null = fetch failed that day
+  lens: Record<Lens, number> | null;          // estimateRescore blend of fresh
+                                              // DET + last real audit's RUB
+                                              // signals; null before the first
+                                              // full audit of that url
+  changed?: true;                             // content_hash differs from the
+                                              // previous snapshot → UI badges
+                                              // "page changed — run a full audit"
+  err?: true;                                 // fetch failed (fetch_meta.error)
+}
+// GET /api/growth?url=…&days=…(≤90, default 30)                        (owner-authed)
+//   → { url, signalsVersion, series: GrowthSnapshot[] }                oldest → newest
+// GET /api/cron/snapshots — Authorization: Bearer <CRON_SECRET> ONLY
+//   (timing-safe compare; 401 otherwise). Runs the bounded collector.
+//   → { scanned, captured, failed, pruned }
+```
+
+Invariants: one entry per (url, day), dates unique and ascending; det scores
+are 0–100 in steps of 5; `series.length ≤ days`; the collector is idempotent
+per (owner, url, day) and bounded per invocation (≤25 sites, 240s deadline,
+least-recently-run first). Zero LLM/provider spend on the cron path (D-019:
+snapshots are DET-only by design — a scheduled signal sample, not a degraded
+audit; D-005 governs user-facing audits and is untouched).
+
+Canonical mock: `lib/growth/mockSeries.ts` (g2-ui owns) — a 30-day series
+containing at least one `changed` day, one `err` day, and a pre-first-audit
+stretch with `lens: null`.
