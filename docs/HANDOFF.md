@@ -709,3 +709,9 @@ smoke the collector); (4) next phase per plan: G3 site hub + skills.
 
 CONTEXT: cron schedule 0 3 * * * UTC in vercel.json; free DET-only (D-019);
 capacity + fairness rationale in D-020.
+
+DEPLOYED: G2 live-validated on seo-ai-audit-orbix2.vercel.app — / 200,
+dashboard serves Growth overview, tracked-sites + cron both 401 unauthenticated
+(deny-closed auth proven), and post-migration probe returned {"sites":[]} 200,
+confirming 202607200005 is applied. CRON_SECRET rotated + baked into the live
+deployment; first scheduled snapshot run: 03:00 UTC tonight.
