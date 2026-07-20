@@ -7,28 +7,39 @@ import {
   type TechnicalAuditTask,
   type TechnicalSeoResult,
 } from "@/lib/dataforseo";
+import { checkRateLimit } from "@/lib/audit/ratelimit";
+import { clientIp } from "@/lib/audit/httpHelpers";
+import { cancelSpend, reserveSpend } from "@/lib/providers/budget";
+import {
+  attachProviderTask,
+  latestTask,
+  releaseReservation,
+  reserveTask,
+  type ProviderTaskRow,
+} from "@/lib/providers/taskStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const PROVIDER = "dataforseo-onpage";
+const LEDGER_OPERATION = "on_page_task";
+
+// This endpoint spends real DataForSEO money; before F2 it had NO rate limit
+// (per-owner idempotency doesn't help — device tokens are free to mint).
+const START_IP_LIMIT_PER_MIN = 3;
+const START_IP_LIMIT_PER_DAY = 10;
+
+// Cost anchor: the live validation crawl billed $0.00015 for one page.
+// Reserve pessimistically at ~$0.0002/page so the estimate over-counts until
+// the actual cost settles.
+const EST_COST_PER_PAGE_USD = 0.0002;
 
 const startSchema = z.object({
   auditId: z.string().min(1).max(4096),
   url: z.string().url().max(2048),
   limit: z.number().int().min(1).max(500).default(500),
 });
-
-type ProviderTaskRow = {
-  audit_id: string;
-  provider_task_id: string | null;
-  status: string;
-  request: Record<string, unknown>;
-  result_meta: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-};
 
 function json(status: number, body: unknown): Response {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -71,17 +82,8 @@ function rowToTask(row: ProviderTaskRow): TechnicalAuditTask {
   };
 }
 
-async function latestTask(owner: string, auditId: string): Promise<{ row: ProviderTaskRow | null; error: unknown }> {
-  const { data, error } = await getSupabaseAdmin()
-    .from("provider_tasks")
-    .select("audit_id,provider_task_id,status,request,result_meta,created_at,updated_at")
-    .eq("owner_hash", owner)
-    .eq("audit_id", auditId)
-    .eq("provider", PROVIDER)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return { row: data as ProviderTaskRow | null, error };
+function taskKey(owner: string, auditId: string) {
+  return { ownerHash: owner, auditId, provider: PROVIDER };
 }
 
 async function ensureUsageLedger(owner: string, row: ProviderTaskRow): Promise<boolean> {
@@ -92,7 +94,7 @@ async function ensureUsageLedger(owner: string, row: ProviderTaskRow): Promise<b
     owner_hash: owner,
     audit_id: row.audit_id,
     provider: PROVIDER,
-    operation: "on_page_task",
+    operation: LEDGER_OPERATION,
     actual_cost_usd: costUsd,
     metadata: { providerTaskId: row.provider_task_id, maxCrawlPages },
   }, { onConflict: "owner_hash,audit_id,provider,operation" });
@@ -100,6 +102,18 @@ async function ensureUsageLedger(owner: string, row: ProviderTaskRow): Promise<b
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Rate-limit before any parsing or DB work (WS2-D4 precedent): this is the
+  // paid surface, so the bucket is deliberately tight.
+  const ip = clientIp(request);
+  const minute = checkRateLimit(`technical-audit:ip:min:${ip}`, START_IP_LIMIT_PER_MIN, 60);
+  const day = minute.allowed
+    ? checkRateLimit(`technical-audit:ip:day:${ip}`, START_IP_LIMIT_PER_DAY, 86_400)
+    : minute;
+  if (!minute.allowed || !day.allowed) {
+    const retryAfter = Math.max(minute.retryAfterSec, day.retryAfterSec);
+    return json(429, { error: "rate_limit", retryAfter });
+  }
+
   const owner = await requestOwner(request);
   if (owner instanceof Response) return owner;
   if (!dataForSeoConfigured()) return json(503, { error: "provider_unavailable" });
@@ -125,31 +139,36 @@ export async function POST(request: Request): Promise<Response> {
   const requestedHost = targetUrl.hostname.replace(/^www\./i, "");
   if (!auditHost || auditHost !== requestedHost) return json(400, { error: "audit_target_mismatch" });
 
-  const existing = await latestTask(owner, auditId);
+  const existing = await latestTask(taskKey(owner, auditId));
   if (existing.error) return json(503, { error: "cloud_read_failed" });
   if (existing.row) {
     const ledgerRecorded = await ensureUsageLedger(owner, existing.row);
     return json(200, { task: rowToTask(existing.row), reused: true, ledgerRecorded });
   }
 
-  const now = new Date().toISOString();
+  // Spend gate (D-016): deny before reserving anything. The reservation row
+  // in usage_ledger counts against the caps until the actual cost settles.
+  const spend = {
+    ownerHash: owner,
+    auditId,
+    provider: PROVIDER,
+    operation: LEDGER_OPERATION,
+    estCostUsd: limit * EST_COST_PER_PAGE_USD,
+  };
+  const budget = await reserveSpend(spend);
+  if (!budget.allowed) {
+    return budget.reason === "error"
+      ? json(503, { error: "cloud_write_failed" })
+      : json(429, { error: "budget_exceeded", scope: budget.reason });
+  }
+
   const safeRequest = { target: requestedHost, maxCrawlPages: limit };
-  const { data: reserved, error: reserveError } = await db
-    .from("provider_tasks")
-    .insert({
-      owner_hash: owner,
-      audit_id: auditId,
-      provider: PROVIDER,
-      provider_task_id: null,
-      status: "creating",
-      request: safeRequest,
-      result_meta: {},
-      updated_at: now,
-    })
-    .select("audit_id,provider_task_id,status,request,result_meta,created_at,updated_at")
-    .single();
-  if (reserveError || !reserved) {
-    const concurrent = await latestTask(owner, auditId);
+  const reservation = await reserveTask(taskKey(owner, auditId), safeRequest);
+  if (reservation.error || !reservation.row) {
+    // Unique-index collision: a concurrent caller reserved first — reuse its
+    // task and drop our budget reservation (theirs is the one that counts).
+    await cancelSpend(spend);
+    const concurrent = await latestTask(taskKey(owner, auditId));
     if (concurrent.row) {
       const ledgerRecorded = await ensureUsageLedger(owner, concurrent.row);
       return json(200, { task: rowToTask(concurrent.row), reused: true, ledgerRecorded });
@@ -164,34 +183,21 @@ export async function POST(request: Request): Promise<Response> {
       maxCrawlPages: limit,
     });
   } catch {
-    await db.from("provider_tasks")
-      .delete()
-      .eq("owner_hash", owner)
-      .eq("audit_id", auditId)
-      .eq("provider", PROVIDER)
-      .is("provider_task_id", null);
+    await releaseReservation(owner, reservation.row.id);
+    await cancelSpend(spend);
     return json(502, { error: "provider_start_failed" });
   }
 
-  const updatedAt = new Date().toISOString();
-  const { data: inserted, error: insertError } = await db
-    .from("provider_tasks")
-    .update({
-      provider_task_id: started.taskId,
-      status: "queued",
-      result_meta: { costUsd: started.costUsd },
-      updated_at: updatedAt,
-    })
-    .eq("owner_hash", owner)
-    .eq("audit_id", auditId)
-    .eq("provider", PROVIDER)
-    .select("audit_id,provider_task_id,status,request,result_meta,created_at,updated_at")
-    .single();
+  const { row: inserted, error: insertError } = await attachProviderTask(
+    owner,
+    reservation.row.id,
+    started.taskId,
+    { costUsd: started.costUsd },
+  );
   if (insertError || !inserted) return json(503, { error: "cloud_write_failed" });
 
-  const insertedRow = inserted as ProviderTaskRow;
-  const ledgerRecorded = await ensureUsageLedger(owner, insertedRow);
-  return json(201, { task: rowToTask(insertedRow), reused: false, ledgerRecorded });
+  const ledgerRecorded = await ensureUsageLedger(owner, inserted);
+  return json(201, { task: rowToTask(inserted), reused: false, ledgerRecorded });
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -200,7 +206,7 @@ export async function GET(request: Request): Promise<Response> {
   const auditId = new URL(request.url).searchParams.get("auditId");
   if (!auditId || auditId.length > 4096) return json(400, { error: "invalid_audit_id" });
 
-  const current = await latestTask(owner, auditId);
+  const current = await latestTask(taskKey(owner, auditId));
   if (current.error) return json(503, { error: "cloud_read_failed" });
   if (!current.row) return json(404, { error: "task_not_found", configured: dataForSeoConfigured() });
   const currentTask = rowToTask(current.row);

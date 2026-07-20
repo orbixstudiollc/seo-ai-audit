@@ -5,6 +5,9 @@ const mocks = vi.hoisted(() => ({
   configured: vi.fn(() => true),
   start: vi.fn(),
   poll: vi.fn(),
+  rateLimit: vi.fn(),
+  reserveSpend: vi.fn(),
+  cancelSpend: vi.fn(),
 }));
 
 vi.mock("@/lib/cloud/server", () => ({
@@ -19,9 +22,21 @@ vi.mock("@/lib/dataforseo", () => ({
   pollOnPageTask: mocks.poll,
 }));
 
+// The real limiter is module-level in-memory state; unmocked, the suite's own
+// repeated POSTs would drain the 3/min bucket and fail later cases.
+vi.mock("@/lib/audit/ratelimit", () => ({
+  checkRateLimit: mocks.rateLimit,
+}));
+
+vi.mock("@/lib/providers/budget", () => ({
+  reserveSpend: mocks.reserveSpend,
+  cancelSpend: mocks.cancelSpend,
+}));
+
 import { GET, POST } from "@/app/api/technical-audit/route";
 
 const row = {
+  id: "task-row-1",
   audit_id: "site:example",
   provider_task_id: "provider-task",
   status: "queued",
@@ -53,6 +68,9 @@ function postRequest(body: unknown): Request {
 beforeEach(() => {
   mocks.from.mockReset(); mocks.configured.mockReset(); mocks.configured.mockReturnValue(true);
   mocks.start.mockReset(); mocks.poll.mockReset();
+  mocks.rateLimit.mockReset(); mocks.rateLimit.mockReturnValue({ allowed: true, retryAfterSec: 0 });
+  mocks.reserveSpend.mockReset(); mocks.reserveSpend.mockResolvedValue({ allowed: true });
+  mocks.cancelSpend.mockReset(); mocks.cancelSpend.mockResolvedValue(undefined);
 });
 
 describe("technical audit route", () => {
@@ -104,6 +122,53 @@ describe("technical audit route", () => {
     expect(usage.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ actual_cost_usd: 0.01 }),
       { onConflict: "owner_hash,audit_id,provider,operation" },
+    );
+  });
+
+  it("rejects over the per-IP bucket before touching the database", async () => {
+    mocks.rateLimit.mockReturnValue({ allowed: false, retryAfterSec: 42 });
+    const response = await POST(postRequest({ auditId: "site:example", url: "https://example.com", limit: 500 }));
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ error: "rate_limit", retryAfter: 42 });
+    expect(mocks.from).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("denies with budget_exceeded before reserving a task and never calls the provider", async () => {
+    const audit = chain({ data: { id: "site:example", url: "https://example.com" }, error: null });
+    const none = chain({ data: null, error: null });
+    mocks.from.mockImplementation((table: string) => (table === "audit_runs" ? audit : none));
+    mocks.reserveSpend.mockResolvedValue({ allowed: false, reason: "owner" });
+
+    const response = await POST(postRequest({ auditId: "site:example", url: "https://example.com", limit: 500 }));
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ error: "budget_exceeded", scope: "owner" });
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(none.insert).not.toHaveBeenCalled();
+  });
+
+  it("releases only its own reservation (by primary key) and cancels spend when the provider start fails", async () => {
+    const audit = chain({ data: { id: "site:example", url: "https://example.com" }, error: null });
+    const none = chain({ data: null, error: null });
+    const reserved = chain({ data: { ...row, id: "res-1", provider_task_id: null, status: "creating" }, error: null });
+    const del = chain({ data: null, error: null });
+    let providerCalls = 0;
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "audit_runs") return audit;
+      providerCalls += 1;
+      if (providerCalls === 1) return none;      // latestTask
+      if (providerCalls === 2) return reserved;  // reserveTask insert
+      return del;                                // releaseReservation delete
+    });
+    mocks.start.mockRejectedValue(new Error("provider down"));
+
+    const response = await POST(postRequest({ auditId: "site:example", url: "https://example.com", limit: 500 }));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "provider_start_failed" });
+    expect(del.delete).toHaveBeenCalled();
+    expect(del.eq).toHaveBeenCalledWith("id", "res-1");
+    expect(mocks.cancelSpend).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "on_page_task", provider: "dataforseo-onpage" }),
     );
   });
 
