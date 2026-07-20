@@ -69,7 +69,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 |---|---|---|---|
 | F1-CONTRACT | DATA-CONTRACT v1.2 (§8 SkillTask, §9 agent runs, §10 action plan, §11 Google/GSC/GA4, §12 insights) + decisions D-014–D-018 | Fable | ✅ done (this commit) |
 | F2-BUDGET | spend-gate RPCs, taskStore/budget extraction, fingerprint idempotency, race fix, technical-audit rate limit | coordinator | ✅ done — ⚠️ apply migration 202607200004 BEFORE next deploy (`docs/phases/f2-budget-report.md`) |
-| **Growth program G1–G5** | daily-progress dashboard per approved plan (`~/.claude/plans/shimmying-launching-elephant.md`): G1 growth tab from history · G2 tracked sites + free daily DET snapshots + cron · G3 skills/agents per site hub · G4 GSC/GA4 daily ingestion · G5 ads panels | coordinator | 🔄 G1 in progress |
+| **Growth program G1–G5** | daily-progress dashboard per approved plan (`~/.claude/plans/shimmying-launching-elephant.md`): ✅ G1 growth tab (merged, 30/30 e2e, `docs/phases/g1-growth-overview-report.md`) · 🧾 G2 tracked sites + daily DET snapshots (next, multi-agent pipeline `.claude/plan/multi-agent-growth-execution.md`) · G3 site hub/skills · G4 GSC/GA4 · G5 ads | coordinator + agents | 🔄 in progress |
 | F3-OPS | Google consent-screen verification, privacy policy page, env rollout | Sonnet + user | 🧾 queued |
 | W1-DFS | DataForSEO serp/keywords/backlinks/labs modules + routes | Sonnet | 🧾 queued (after F1; F2 stubs OK) |
 | W2-GOOGLE | OAuth vault: oauth_states, google_connections (AES-GCM), connect/disconnect, claim-RPC update | Opus | 🧾 queued |
