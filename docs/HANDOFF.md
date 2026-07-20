@@ -531,3 +531,100 @@ monitor provider/rate-limit behavior during large recovery batches.
 CONTEXT: Explicit retry requests use `{ url, pages }`; they must not include
 `limit`. Successful URLs are never submitted, so they incur no new LLM cost.
 Custom SMTP remains the only unrelated operator configuration item.
+
+## 2026-07-20 · Coordinator: platform program kickoff (F1 done) · main (local)
+
+DONE: 4-agent parallel analysis (backend, frontend, SEO-domain, adversarial
+critic) synthesized into `.claude/plan/seo-team-platform.md`. F1-CONTRACT
+shipped: DATA-CONTRACT v1.2 §8 SkillTask envelope, §9 agent-mode hybrid runs,
+§10 action plan, §11 Google connections/GSC/GA4, §12 insights. Decisions
+D-014 (skill triage) through D-018 recorded. `scripts/db-wipe.sql` deleted
+(D-018). claude-seo v2.2.0 installed locally (`~/claude-seo`,
+`~/.claude/skills/seo*`) as reference implementation + usable `/seo*` tools.
+
+NEXT: user pushes main, then launch executor sessions with the prompts below
+(F2 first or parallel with W5/W3 — F2 blocks only the PAID parts of W1/W2).
+
+CONTEXT: coordinator reviews every branch per COORDINATION.md; closing ritual
+applies to every session below. Read before building:
+`.claude/plan/seo-team-platform.md`, `docs/DATA-CONTRACT.md` §8–§12,
+`docs/DECISIONS.md` D-014–D-018, `docs/ARCHITECTURE.md`, `PROJECT-STATUS.md`.
+
+---
+
+### Kickoff prompt — F2-BUDGET (model: Opus; branch `wsp-budget`)
+
+You are implementing F2-BUDGET of the SEO-team platform program. Read
+`.claude/plan/seo-team-platform.md` (Wave 0), `docs/DATA-CONTRACT.md` §8,
+D-016, and `app/api/technical-audit/route.ts` + its migrations. Deliver:
+(1) migration: budgets table + `reserve_spend`/`settle_spend` security-definer
+RPC over usage_ledger (per-owner + global daily USD caps from env
+`PROVIDER_OWNER_DAILY_USD`/`PROVIDER_GLOBAL_DAILY_USD`); add
+`request_fingerprint` to provider_tasks + rebuild its unique index AND update
+`claim_anonymous_workspace` in the same migration; (2) extract
+`lib/providers/taskStore.ts` + `lib/providers/budget.ts` from the
+technical-audit route, fixing the reservation-delete race (delete by primary
+key, not the NULL-provider_task_id scan); (3) add per-IP rate limiting to
+POST /api/technical-audit (reuse lib/audit/ratelimit.ts); (4) tests incl.
+concurrent reservation + budget-denied (`budget_exceeded` per §8). Gates
+green; closing ritual. Do not touch UI, Google, or new DataForSEO endpoints.
+
+### Kickoff prompt — F3-OPS (model: Sonnet; branch `wsp-ops`)
+
+You are implementing F3-OPS. Read the plan (Wave 0) + D-015. Deliver:
+(1) a real `/privacy` page (data handling: audits, Supabase storage, optional
+accounts, Google API Limited-Use disclosure, retention, deletion contact) —
+required for Google OAuth verification; (2) `.env.example` additions
+(`GOOGLE_CLIENT_ID/SECRET/OAUTH_REDIRECT_URL/TOKEN_ENC_KEY`,
+`PROVIDER_*_DAILY_USD`); (3) a `docs/ops/google-verification.md` runbook with
+the exact console steps + scope-justification draft for the user. Code is
+small; most value is the runbook + policy page. Gates green; closing ritual.
+
+### Kickoff prompt — W5-ACTION-PLAN (model: Sonnet; branch `wsp-action-plan`)
+
+You are implementing W5-ACTION-PLAN. Read the plan (Wave 1) +
+DATA-CONTRACT §10. Pure-TS synthesizer `lib/skills/actionPlan.ts`: map
+existing `AuditFindings` (blockers/gaps), lens `capReason`s, site
+`commonFindings`/`worstPages`, and DataForSEO `issueKeys` into
+`ActionPlan` (≤50 items, severity-sorted, effort-tagged, bounded urls).
+Render as a report section (compose SeverityChip/Card; adapt the dormant
+`RoadmapPanel` if it fits) in single-page AND site reports + include in
+export. Unit tests from fixtures; e2e extends mock-report spec. No new
+providers, no LLM calls. Gates green; closing ritual.
+
+### Kickoff prompt — W3-SHELL (model: Sonnet; branch `wsp-skill-shell`)
+
+You are implementing W3-SHELL. Read the plan (Wave 1) + DATA-CONTRACT §8.
+Generalize `app/components/audit/TechnicalSeoPanel.tsx` into a reusable
+`SkillPanel` (explicit start button, provider-unavailable/budget-exceeded
+states, poll loop, cost display) driven by any `SkillTask`; create
+`lib/skills/mocks/` fixtures for 3 skills in all lifecycle states and a
+dev-only `/dev/mock-skills` page rendering every state. Renderers may only
+compose existing primitives (Card/Button/SeverityChip/ScoreTile/DiffHunk/
+FindingsDrawer) — no new colors or status vocabularies. Gates green + axe on
+the dev page; closing ritual.
+
+### Kickoff prompt — W1-DFS (model: Sonnet; branch `wsp-dfs`; start after F2 merges or stub its helper)
+
+You are implementing W1-DFS. Read the plan (Wave 1), DATA-CONTRACT §8, and
+`lib/dataforseo/client.ts` (the pattern to clone). Add `serp.ts`,
+`keywords.ts`, `backlinks.ts`, `labs.ts` over the shared transport (live
+endpoints only, typed normalizers with row caps, cost from `task.cost`);
+routes `app/api/skills/{serp,keywords,backlinks,labs}` implementing the §8
+envelope, gated by `lib/providers/budget.ts` (stub with the F2 signature if
+not merged). Mock tests mirroring `client.test.ts`. No UI. Gates green;
+closing ritual.
+
+### Kickoff prompt — W2-GOOGLE (model: Opus; branch `wsp-google`; needs F3's client id for live test, mock till then)
+
+You are implementing W2-GOOGLE. Read the plan (Wave 1), DATA-CONTRACT §11,
+D-015, and `supabase/migrations/202607200003*` (claim RPC). Deliver:
+migration for `oauth_states` (single-use 256-bit nonce, 10-min TTL) +
+`google_connections` (AES-256-GCM-encrypted tokens via `GOOGLE_TOKEN_ENC_KEY`,
+server-only RLS, claim-RPC block in the SAME migration); routes
+`/api/integrations/google/{start,callback,status,disconnect}` — connect
+REQUIRES the verified bearer path (never device-only); `lib/google/tokens.ts`
+(refresh, invalid_grant → status revoked); revoke-at-Google on disconnect;
+purge on workspace delete. Tokens never in responses/logs. Unit tests with a
+mocked Google token endpoint; SQL test for the claim path. Gates green;
+closing ritual.

@@ -5,7 +5,8 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-20 · by: cloud completion session · branch `main`
+Last updated: 2026-07-20 (pm) · by: coordinator session (Fable) — platform
+program kicked off · branch `main`
 
 ## Product
 
@@ -62,12 +63,34 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | 11 | Cloud Phase 2: DataForSEO technical crawl + usage ledger | `main` `e9a1269`+ | ✅ configured + deployed + live provider task validated |
 | 12 | Phase 5: optional account auth + cross-device identity | `main` `7b51ac2` | ✅ implemented + migrated + deployed + live data path validated |
 
+## SEO-team platform program (plan: `.claude/plan/seo-team-platform.md`, contract: DATA-CONTRACT §8–§12, triage: D-014)
+
+| WS | Scope | Model | Status |
+|---|---|---|---|
+| F1-CONTRACT | DATA-CONTRACT v1.2 (§8 SkillTask, §9 agent runs, §10 action plan, §11 Google/GSC/GA4, §12 insights) + decisions D-014–D-018 | Fable | ✅ done (this commit) |
+| F2-BUDGET | budgets + reserve/settle RPC, taskStore/budget extraction, fingerprint idempotency, race fix, technical-audit rate limit | Opus | 🧾 queued — kickoff prompt in HANDOFF |
+| F3-OPS | Google consent-screen verification, privacy policy page, env rollout | Sonnet + user | 🧾 queued |
+| W1-DFS | DataForSEO serp/keywords/backlinks/labs modules + routes | Sonnet | 🧾 queued (after F1; F2 stubs OK) |
+| W2-GOOGLE | OAuth vault: oauth_states, google_connections (AES-GCM), connect/disconnect, claim-RPC update | Opus | 🧾 queued |
+| W3-SHELL | SkillPanel shell + /dev/mock-skills + agent mode entry stub | Sonnet | 🧾 queued |
+| W4-DET-SKILLS | schema/sitemap/hreflang/images/SXO route+renderer pairs | Sonnet | 🧾 queued (per-skill parallel) |
+| W5-ACTION-PLAN | 4-tier severity synthesizer over existing data (§10) | Sonnet | 🧾 queued (no dependencies — can start now) |
+| W6–W10 (wave 2) | GSC/GA4 data routes · agent orchestrator · compete/clusters/briefs · insights home · drift | per plan | ⏸ after wave 1 |
+| WS5 bulk upload | spreadsheet → bulk audit (spec `docs/phases/ws5-bulk-upload-spec.md`, needs refresh vs landed bulk API) | Sonnet | ⏸ parked |
+
 ## Pending user actions
 
 1. Configure custom SMTP in Supabase Auth for production email capacity; the
    built-in sender is limited to two emails per hour.
 2. Optional cleanup: delete stale `DATABASE_URL` / `BETTER_AUTH_*` /
    `ENCRYPTION_KEY` vars from Vercel (WS1 report, open question 1).
+3. **Push main** — the deny rule `Bash(git push origin main:*)` in
+   `~/.claude/settings.json` blocks the coordinator; run
+   `env -u GH_TOKEN git push origin main` yourself or approve an alternate.
+4. **F3-OPS Google steps** (user-owned): create the Google Cloud OAuth app,
+   consent screen with `webmasters.readonly` + `analytics.readonly`, submit
+   verification; provide `GOOGLE_CLIENT_ID`/`SECRET` + `GOOGLE_TOKEN_ENC_KEY`
+   + budget-cap envs to Vercel when W2/F2 land.
 
 ## Key decisions (full log: `docs/DECISIONS.md`)
 
@@ -104,5 +127,4 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | Per-workstream specs + reports (incl. reviews) | `docs/phases/` |
 | Remaining cloud/provider phases | `docs/phases/cloud-roadmap.md` |
 | Session handoffs (next-session prompts) | `docs/HANDOFF.md` |
-| Backend wipe SQL | `scripts/db-wipe.sql` |
 | Pre-pivot app (auth/DB/BYOK) | branch `backup/pre-rewrite` / tag `backup-pre-rewrite` |

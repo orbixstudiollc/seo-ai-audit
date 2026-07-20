@@ -61,3 +61,34 @@ propose; the coordinator records.
   account owner hash, and uses one restricted `security definer` RPC to claim
   an anonymous device workspace atomically. Signing out returns requests to
   device ownership; auditing never requires registration.
+- **D-014** 2026-07-20 — **Skill triage for the SEO-team platform.** From the
+  claude-seo v2.2.0 inventory (installed locally as reference): BUILD action
+  plan, drift, schema validate/generate, sitemap validate, hreflang, image
+  checks, SXO, competitor compare, topic clusters, content briefs,
+  keyword/backlink panels, GSC/GA4 insights. ALREADY COVERED: GEO, E-E-A-T,
+  page audit, schema detection, technical crawl. DEFER: local, maps,
+  e-commerce, programmatic, FLOW, image-gen, IndexNow. Deferred items need a
+  new decision, not enthusiasm, to enter scope. Plan:
+  `.claude/plan/seo-team-platform.md`; contract: DATA-CONTRACT §8–§12.
+- **D-015** 2026-07-20 — **Google integrations are account-gated; tokens are
+  app-encrypted.** OAuth refresh tokens never bind to anonymous device tokens
+  (orphaned + unrevokable when localStorage clears; mintable tokens defeat
+  caps). Connect flows require the verified bearer path (D-013). Tokens:
+  AES-256-GCM with a dedicated server env key, server-only RLS tables,
+  revoke-at-Google on disconnect, purge endpoint, never logged/serialized.
+  Consent-screen verification (sensitive scopes) filed as week-1 ops.
+- **D-016** 2026-07-20 — **No new paid endpoint before the spend gate.**
+  usage_ledger becomes enforcing: budgets + reserve_spend/settle RPC (per-owner
+  AND global daily caps), request-fingerprint idempotency on provider_tasks,
+  per-IP rate limit added to /api/technical-audit (it had none). Supersedes
+  D-008 for paid routes; D-008 stands for free ones.
+- **D-017** 2026-07-20 — **Agent mode runs as durable hybrid, not one stream.**
+  Fast skills inline in SSE; slow/provider skills hand off to polled
+  SkillTasks; run state persists (agent_runs); estimated cost shown before
+  fan-out; per-run caps on skills/USD/wall-clock. Rationale: bulk already
+  needs a 240s budget inside maxDuration=300.
+- **D-018** 2026-07-20 — **scripts/db-wipe.sql deleted.** Written for the
+  pre-D-011 stateless era and never executed; with Supabase now holding live
+  production data (audit_runs, reports, ledger, Google tokens coming), a
+  runnable full-schema wipe in the repo is pure hazard. Recoverable from git
+  history if ever legitimately needed.

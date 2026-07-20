@@ -255,3 +255,153 @@ export type SiteErrorKind =
 sitemap.xml (+ index children), every crawled page, every page audited — goes
 through `lib/import/ssrfGuard.ts`'s pinned dispatcher (§ARCHITECTURE.md
 constraint 4), the same one `/api/audit` uses for its single fetch.
+
+## 8. SkillTask envelope (v1.2, additive — coordinator, 2026-07-20)
+
+**Additive.** Nothing in §1–§7 changes. This section is the shared shape for
+every specialist "skill" the platform runs (schema validate/generate, sitemap
+validate, hreflang, image checks, SXO, backlinks panel, SERP/keyword pulls,
+technical crawl — which retrofits onto this envelope without breaking its
+current response). Modeled on `TechnicalAuditTask` (`lib/dataforseo/types.ts`)
+and the reserve→call→settle flow in `app/api/technical-audit/route.ts`.
+
+```ts
+// lib/skills/types.ts (new home; TechnicalAuditTask aliases onto this later)
+export type SkillId =
+  | "schema" | "sitemap" | "hreflang" | "images" | "sxo"
+  | "serp" | "keywords" | "backlinks" | "labs"
+  | "technical-crawl" | "gsc" | "ga4" | "action-plan" | "brief" | "compare";
+
+export type SkillTaskStatus =
+  | "creating"   // reserved row, provider not yet called
+  | "queued" | "running"
+  | "complete" | "failed";
+
+export interface SkillScope { kind: "page" | "site" | "keyword"; url?: string; keyword?: string; }
+
+export interface SkillTask<TResult = unknown> {
+  id: string;                 // uuid
+  skillId: SkillId;
+  scope: SkillScope;
+  status: SkillTaskStatus;
+  createdAt: string; updatedAt: string;
+  /** Actual provider cost in USD (0 for free/deterministic skills). */
+  costUsd: number;
+  /** Bump when a skill's result payload shape changes. */
+  resultVersion: number;
+  /** Present only when status === "complete". Opaque to the shell; typed per skill. */
+  result: TResult | null;
+  /** Present only when status === "failed". */
+  error?: { kind: SkillErrorKind; message: string };
+}
+
+export type SkillErrorKind =
+  | "invalid_input" | "fetch_failed" | "unsupported_content"
+  | "provider_unavailable"   // env not configured (mirror technical-audit 503)
+  | "budget_exceeded"        // NEW: reserve_spend denied (owner or global cap)
+  | "rate_limit" | "server";
+```
+
+**Route pattern** (one per skill, `app/api/skills/<skillId>/route.ts`):
+`POST {scope,…} → { task: SkillTask }` (may already be `complete` for fast
+skills); `GET ?id= → { task }` for polling. Owner-scoped via
+`resolveOwnerHashFromRequest`; every PAID skill calls the budget helper
+(`lib/providers/budget.ts`, F2) **before** reserving, and reserves through
+`lib/providers/taskStore.ts` with a `request_fingerprint` =
+sha256(canonical request JSON) so identical repeat requests reuse the stored
+task (`reused: true` in the POST response) instead of re-spending.
+Persistence: `provider_tasks` generalized (fingerprint column, F2 migration);
+free deterministic skills MAY skip persistence and return `complete` inline.
+
+**Mocks:** each skill ships `lib/skills/mocks/<skillId>.ts` exporting a
+complete `SkillTask` in every lifecycle state used by its renderer, plus
+`/dev/mock-skills` renders all of them (W3-SHELL owns the page).
+
+## 9. Agent-mode run (v1.2, additive)
+
+One orchestrated run = SSE stream (same wire framing as §2) + durable run row.
+**Hybrid execution is contractual:** fast skills resolve inline in the
+stream; slow/provider skills hand off to a polled `SkillTask` and the stream
+finishes without them — the report completes progressively on poll/reopen.
+
+```ts
+export type AgentStreamEvent =
+  | { type: "agent:plan"; runId: string; businessType: string;
+      skills: Array<{ skillId: SkillId; mode: "inline" | "handoff"; estCostUsd: number }> }
+  | { type: "agent:skill-start"; skillId: SkillId }
+  | { type: "agent:skill-done";  skillId: SkillId; task: SkillTask }       // inline completion
+  | { type: "agent:skill-handoff"; skillId: SkillId; taskId: string }      // poll via §8 GET
+  | { type: "agent:rollup"; runId: string; actionPlan: ActionPlan;         // §10
+      pendingTaskIds: string[] }                                           // may be non-empty
+  | { type: "agent:done" }
+  | { type: "agent:error"; kind: SkillErrorKind | "run_cap_exceeded"; message: string };
+```
+
+Invariants: `agent:plan` is always first (its `estCostUsd` sum is shown to the
+user BEFORE fan-out — explicit-start precedent from TechnicalSeoPanel);
+`agent:rollup` is always emitted even when skills failed or are pending;
+run caps (max skills/run, max USD/run, wall-clock) are env constants enforced
+server-side; after `agent:error` no further events. Run state persists in
+`agent_runs` (owner-scoped, same RLS posture) so reopening a saved report can
+resolve `pendingTaskIds` via §8 polling.
+
+## 10. Action plan (v1.2, additive)
+
+Pure-TS synthesis over existing data (findings, cap reasons, site rollups,
+technical issueKeys) — no new providers.
+
+```ts
+export type ActionSeverity = "critical" | "high" | "medium" | "low";
+export interface ActionItem {
+  id: string; severity: ActionSeverity;
+  title: string; detail: string;
+  /** Where it came from: signal id, lens cap, issueKey, or skillId. */
+  source: string;
+  /** Affected URLs (bounded ≤ 20). */
+  urls: string[];
+  effort: "quick" | "moderate" | "project";
+}
+export interface ActionPlan { items: ActionItem[]; generatedAt: string; }  // items ≤ 50, severity-sorted
+```
+
+## 11. Google connections + GSC/GA4 (v1.2, additive)
+
+Connections REQUIRE a verified account (bearer path, D-015) — never a
+device-only workspace. Tokens never appear in any response.
+
+```ts
+export interface GoogleConnectionStatus {
+  status: "disconnected" | "active" | "revoked";
+  scopes: string[];                       // granted, e.g. ["webmasters.readonly","analytics.readonly"]
+  gscSite: string | null;                 // selected property, e.g. "sc-domain:example.com"
+  ga4Property: string | null;             // e.g. "properties/123456"
+  connectedAt: string | null;
+}
+// GET /api/integrations/google/properties →
+//   { gscSites: string[], ga4Properties: Array<{ id: string; displayName: string }> }
+export interface GscQueryRow  { key: string; clicks: number; impressions: number; ctr: number; position: number; }
+// POST /api/integrations/gsc/query { dateRange, dimension: "query"|"page"|"country"|"device", rowLimit ≤ 1000 }
+//   → { rows: GscQueryRow[]; dataAsOf: string }        (cached per property+request/day, costUsd 0)
+export interface Ga4Row { landingPage: string; sessions: number; engagementRate: number; conversions: number; }
+// POST /api/integrations/ga4/report { dateRange, rowLimit ≤ 1000 } → { rows: Ga4Row[]; dataAsOf: string }
+```
+
+## 12. Insights (v1.2, additive)
+
+Server-fetched only (`/api/insights`, owner-scoped) — never merged into
+localStorage. Ranked editorial lists, each item deep-linking to a re-audit.
+
+```ts
+export interface InsightItem { url: string; title: string; metric: string;   // human-readable, e.g. "-38% clicks (28d)"
+  delta: number; lensScores?: Record<Lens, number> | null; }
+export interface Insights {
+  decliningPages: InsightItem[];        // GA4/GSC trend + last audit score
+  strikingDistance: InsightItem[];      // GSC positions 8–20 with audit gaps
+  losingClicks: InsightItem[];          // CTR down vs impressions flat/up
+  regressions: InsightItem[];           // drift: score drops since baseline
+  dataAsOf: string;
+}   // every list ≤ 10 items; empty lists present, never missing
+```
+
+Mocks: `lib/audit/mockInsights.ts`, `lib/audit/mockAgentRun.ts` (W-owners per
+plan). Contract changes to §8–§12 go through the coordinator, same rule as §1–§7.
