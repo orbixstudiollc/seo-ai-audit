@@ -22,16 +22,26 @@ vi.mock("@/lib/growth/collect", () => ({
   pruneOldSnapshots: mocks.pruneOldSnapshots,
 }));
 
+// Needed only by the tracked-sites capacity pin below (this file owns it):
+// static pass-through stubs — the cron/growth routes never import these.
+vi.mock("@/lib/audit/ratelimit", () => ({
+  checkRateLimit: () => ({ allowed: true, retryAfterSec: 0 }),
+}));
+vi.mock("@/lib/import/ssrfGuard", () => ({
+  assertSafeUrl: async (url: string) => ({ url: new URL(url), dispatcher: { close: async () => undefined } }),
+}));
+
 import { GET as cronGet } from "@/app/api/cron/snapshots/route";
 import { GET as growthGet } from "@/app/api/growth/route";
+import { POST as trackedSitesPost } from "@/app/api/tracked-sites/route";
 
-type ChainResult = { data?: unknown; error?: unknown };
+type ChainResult = { data?: unknown; error?: unknown; count?: number | null };
 
 function chain(result: ChainResult) {
   const value: Record<string, ReturnType<typeof vi.fn>> & {
     then?: (onFulfilled: (v: ChainResult) => unknown) => Promise<unknown>;
   } = {} as never;
-  for (const method of ["select", "eq", "or", "order", "limit", "lt", "not", "is", "insert", "update", "delete", "upsert"]) {
+  for (const method of ["select", "eq", "neq", "or", "order", "limit", "lt", "not", "is", "insert", "update", "delete", "upsert"]) {
     value[method] = vi.fn(() => value);
   }
   value.maybeSingle = vi.fn(async () => result);
@@ -111,6 +121,72 @@ describe("cron snapshots run", () => {
     const response = await cronGet(cronRequest("Bearer test-secret"));
     expect(response.status).toBe(503);
   });
+
+  it("asks dueSites for at most 25 sites per invocation (§13 bound)", async () => {
+    mocks.dueSites.mockResolvedValue([]);
+    const response = await cronGet(cronRequest("Bearer test-secret"));
+    expect(response.status).toBe(200);
+    expect(mocks.dueSites).toHaveBeenCalledWith(expect.anything(), expect.any(Date), 25);
+  });
+
+  it("breaks at the 240s deadline: remaining sites get no claim or snapshot", async () => {
+    mocks.dueSites.mockResolvedValue([
+      { ownerHash: "o", url: "https://a.com/", lastRunAt: null },
+      { ownerHash: "o", url: "https://b.com/", lastRunAt: null },
+      { ownerHash: "o", url: "https://c.com/", lastRunAt: null },
+    ]);
+    mocks.claimSite.mockResolvedValue(true);
+    mocks.snapshotSite.mockResolvedValue({ ok: true });
+    const nowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValueOnce(0) // startedAt
+      .mockReturnValueOnce(1_000) // site 1 deadline check — within budget
+      .mockReturnValue(240_001); // site 2 deadline check — expired, loop must break
+    try {
+      const response = await cronGet(cronRequest("Bearer test-secret"));
+      expect(response.status).toBe(200);
+      // scanned reflects only the site processed before the deadline expired.
+      expect(await response.json()).toEqual({ scanned: 1, captured: 1, failed: 0, pruned: 0 });
+      expect(mocks.claimSite).toHaveBeenCalledTimes(1);
+      expect(mocks.snapshotSite).toHaveBeenCalledTimes(1);
+      expect(mocks.snapshotSite).toHaveBeenCalledWith(expect.anything(), "o", "https://a.com/", expect.any(Date));
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+});
+
+// REGRESSION PIN (security review G2). Lives here because this suite owns the
+// growth-gate pins: the deployment-wide 500-site ceiling must not fire below
+// 500 — an off-by-one would refuse tracking while capacity remains.
+describe("tracked-sites global capacity gate", () => {
+  it("does not fire at 499 globally tracked sites — the POST still upserts 201", async () => {
+    const runs = chain({ data: { id: "audit-1" }, error: null });
+    const ownerCount = chain({ count: 3, error: null });
+    const globalCount = chain({ count: 499, error: null });
+    const upserted = chain({
+      data: { url: "https://example.com/", created_at: "2026-07-20T00:00:00.000Z", last_run_at: null },
+      error: null,
+    });
+    let trackedCalls = 0;
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "audit_runs") return runs;
+      trackedCalls += 1;
+      return trackedCalls === 1 ? ownerCount : trackedCalls === 2 ? globalCount : upserted;
+    });
+    const response = await trackedSitesPost(
+      new Request("http://localhost/api/tracked-sites", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com/" }),
+      }),
+    );
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({
+      site: { url: "https://example.com/", createdAt: "2026-07-20T00:00:00.000Z", lastRunAt: null },
+    });
+    expect(upserted.upsert).toHaveBeenCalled();
+  });
 });
 
 describe("growth series route", () => {
@@ -124,6 +200,32 @@ describe("growth series route", () => {
     const response = await growthGet(growthRequest("?url=https%3A%2F%2Fexample.com%2F&days=200"));
     expect(response.status).toBe(400);
     expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it("rejects days=91 (exact upper boundary) with no db call", async () => {
+    const response = await growthGet(growthRequest("?url=https%3A%2F%2Fexample.com%2F&days=91"));
+    expect(response.status).toBe(400);
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it("rejects days=0 and negative days with no db call", async () => {
+    expect((await growthGet(growthRequest("?url=https%3A%2F%2Fexample.com%2F&days=0"))).status).toBe(400);
+    expect((await growthGet(growthRequest("?url=https%3A%2F%2Fexample.com%2F&days=-1"))).status).toBe(400);
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-numeric days with no db call (coerce yields NaN → 400)", async () => {
+    const response = await growthGet(growthRequest("?url=https%3A%2F%2Fexample.com%2F&days=abc"));
+    expect(response.status).toBe(400);
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it("accepts the 90-day maximum and passes it straight to limit", async () => {
+    const snapshots = chain({ data: [], error: null });
+    mocks.from.mockReturnValue(snapshots);
+    const response = await growthGet(growthRequest("?url=https%3A%2F%2Fexample.com%2F&days=90"));
+    expect(response.status).toBe(200);
+    expect(snapshots.limit).toHaveBeenCalledWith(90);
   });
 
   it("rejects a missing or invalid url", async () => {
