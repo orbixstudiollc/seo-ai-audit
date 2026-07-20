@@ -57,7 +57,7 @@ describe("dueSites", () => {
     const sites = await dueSites(db(() => tracked), new Date("2026-07-20T15:00:00.000Z"), 25);
     expect(sites).toEqual([{ ownerHash: "o", url: "https://a.com/", lastRunAt: null }]);
     expect(tracked.or).toHaveBeenCalledWith("last_run_at.is.null,last_run_at.lt.2026-07-20T00:00:00.000Z");
-    expect(tracked.order).toHaveBeenCalledWith("last_run_at", { ascending: true, nullsFirst: true });
+    expect(tracked.order).toHaveBeenCalledWith("last_run_at", { ascending: true, nullsFirst: false });
     expect(tracked.limit).toHaveBeenCalledWith(25);
   });
 

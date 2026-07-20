@@ -35,13 +35,19 @@ function utcDayStart(now: Date): string {
   return `${now.toISOString().slice(0, 10)}T00:00:00.000Z`;
 }
 
-/** Sites not yet snapshotted today (UTC), least-recently-run first. */
+/**
+ * Sites not yet snapshotted today (UTC), least-recently-run first with
+ * never-run sites LAST: existing sites keep their daily cadence even when a
+ * burst of fresh registrations (or a mintable-owner abuser) floods the queue —
+ * new rows only consume whatever budget is left over. (Security review G2:
+ * nulls-first let an attacker starve every legitimate site's daily snapshot.)
+ */
 export async function dueSites(db: SupabaseClient, now: Date, max: number): Promise<DueSite[]> {
   const { data, error } = await db
     .from("tracked_sites")
     .select("owner_hash,url,last_run_at")
     .or(`last_run_at.is.null,last_run_at.lt.${utcDayStart(now)}`)
-    .order("last_run_at", { ascending: true, nullsFirst: true })
+    .order("last_run_at", { ascending: true, nullsFirst: false })
     .limit(max);
   if (error) throw new Error("tracked_sites_read_failed");
   return ((data ?? []) as DueSiteRow[]).map((row) => ({

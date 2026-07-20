@@ -18,6 +18,7 @@ import type { GrowthSnapshot } from "@/lib/growth/types";
 import { scoreBand } from "@/lib/audit/scoreScale";
 import { Card } from "@/app/components/ui/Card";
 import { SiteGrowthCard } from "./SiteGrowthCard";
+import { TrackToggle } from "./TrackToggle";
 
 function SummaryTile({ label, value }: { label: string; value: string }) {
   return (
@@ -207,6 +208,37 @@ export function GrowthOverview() {
               })}
             </ul>
           </section>
+
+          {/* Tracked urls with no local history would otherwise be invisible —
+              silently holding one of the 10 slots with no way to untrack. */}
+          {trackedUrls !== null &&
+            (() => {
+              const inHistory = new Set(records.map((record) => record.url));
+              const orphans = [...trackedUrls].filter((url) => !inHistory.has(url));
+              if (orphans.length === 0) return null;
+              return (
+                <Card label="Also tracking (not in this browser's history)" labelAs="h2" bodyClassName="bg-surface-2">
+                  <ul className="divide-y divide-line">
+                    {orphans.map((url) => (
+                      <li key={url} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                        <span className="min-w-0 truncate font-mono text-[11px] text-text-2">{url}</span>
+                        <TrackToggle
+                          url={url}
+                          tracked
+                          onTrackedChange={() =>
+                            setTrackedUrls((prev) => {
+                              const next = new Set(prev ?? []);
+                              next.delete(url);
+                              return next;
+                            })
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              );
+            })()}
 
           {summary.averageLatestScore !== null && (
             <p className="text-center font-mono text-[10px] uppercase tracking-wider text-text-3">

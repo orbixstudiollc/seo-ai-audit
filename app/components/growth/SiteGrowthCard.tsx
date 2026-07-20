@@ -77,14 +77,16 @@ export function SiteGrowthCard({ group, tracking }: { group: DomainGroup; tracki
 
       {sparkSeries.length >= 2 && (
         <div className="px-4 pb-1">
-          <TrendSparkline series={sparkSeries} />
+          <TrendSparkline series={sparkSeries} noun={daily.length >= 2 ? "days" : "audits"} />
         </div>
       )}
 
-      {dailySeries && dailySeries.length > 0 && (
+      {dailySeries && daily.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-2">
+          {/* Same count the sparkline announces (scored days only) — the
+              caption and aria-label must never disagree for SR users. */}
           <span className="font-mono text-[10px] uppercase tracking-wider text-text-3">
-            {dailySeries.length} snapshot day{dailySeries.length === 1 ? "" : "s"}
+            {daily.length} snapshot day{daily.length === 1 ? "" : "s"}
           </span>
           {newest?.changed && (
             <span

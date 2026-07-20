@@ -52,7 +52,10 @@ export async function GET(request: Request): Promise<Response> {
     // wins; we skip rather than double-fetch.
     if (!(await claimSite(db, site, site.lastRunAt))) continue;
     try {
-      const result = await snapshotSite(db, site.ownerHash, site.url, new Date());
+      // The invocation's `now`, not a fresh Date: a run crossing UTC midnight
+      // must keep writing the day it was scheduled for, or later sites leave a
+      // hole today and pre-fill tomorrow.
+      const result = await snapshotSite(db, site.ownerHash, site.url, now);
       if (result.ok) captured += 1;
       else failed += 1;
     } catch {

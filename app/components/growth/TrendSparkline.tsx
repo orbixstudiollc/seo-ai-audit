@@ -3,6 +3,8 @@ import { scoreBand } from "@/lib/audit/scoreScale";
 type Props = {
   /** Chronological overall scores (0–100), oldest first. */
   series: readonly number[];
+  /** What one point is, for the accessible label: "audits" (G1) or "days" (daily series). */
+  noun?: "audits" | "days";
 };
 
 const WIDTH = 120;
@@ -14,7 +16,7 @@ const PAD = 3;
  * with the score-band color (always paired with the numeric label rendered by
  * the parent, never color-only). No chart library.
  */
-export function TrendSparkline({ series }: Props) {
+export function TrendSparkline({ series, noun = "audits" }: Props) {
   if (series.length < 2) return null;
 
   const min = Math.min(...series, 0);
@@ -34,7 +36,7 @@ export function TrendSparkline({ series }: Props) {
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       className="h-7 w-full"
       role="img"
-      aria-label={`Score trend across ${series.length} audits, latest ${latestScore} out of 100`}
+      aria-label={`Score trend across ${series.length} ${noun}, latest ${latestScore} out of 100`}
       preserveAspectRatio="none"
     >
       <polyline

@@ -31,7 +31,7 @@ function chain(result: ChainResult) {
   const value: Record<string, ReturnType<typeof vi.fn>> & {
     then?: (onFulfilled: (v: ChainResult) => unknown) => Promise<unknown>;
   } = {} as never;
-  for (const method of ["select", "eq", "or", "order", "limit", "lt", "not", "is", "insert", "update", "delete", "upsert"]) {
+  for (const method of ["select", "eq", "neq", "or", "order", "limit", "lt", "not", "is", "insert", "update", "delete", "upsert"]) {
     value[method] = vi.fn(() => value);
   }
   value.maybeSingle = vi.fn(async () => result);
@@ -93,14 +93,32 @@ describe("tracked-sites POST gate order", () => {
     expect(tracked.upsert).not.toHaveBeenCalled();
   });
 
-  it("returns 409 limit_reached at ten tracked sites and never upserts", async () => {
+  it("returns 409 limit_reached at ten OTHER tracked sites and never upserts", async () => {
     const runs = chain({ data: { id: "audit-1" }, error: null });
     const tracked = chain({ count: 10, error: null });
     mocks.from.mockImplementation((table: string) => (table === "audit_runs" ? runs : tracked));
     const response = await POST(jsonRequest("POST", { url: "https://example.com/" }));
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: "limit_reached" });
+    // The owner-count excludes the posted url, so a RE-track never 409s.
+    expect(tracked.neq).toHaveBeenCalledWith("url", "https://example.com/");
     expect(tracked.upsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 capacity at the deployment-wide ceiling and never upserts", async () => {
+    const runs = chain({ data: { id: "audit-1" }, error: null });
+    const ownerCount = chain({ count: 3, error: null });
+    const globalCount = chain({ count: 500, error: null });
+    let trackedCalls = 0;
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "audit_runs") return runs;
+      trackedCalls += 1;
+      return trackedCalls === 1 ? ownerCount : globalCount;
+    });
+    const response = await POST(jsonRequest("POST", { url: "https://example.com/" }));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "capacity" });
+    expect(globalCount.upsert).not.toHaveBeenCalled();
   });
 
   it("upserts and returns 201 with the tracked site once every gate passes", async () => {

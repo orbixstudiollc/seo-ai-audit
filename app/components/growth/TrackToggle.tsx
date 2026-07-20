@@ -40,7 +40,10 @@ export function TrackToggle({ url, tracked, onTrackedChange }: Props) {
     <div className="flex flex-wrap items-center gap-2">
       {tracked ? (
         <>
-          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-2">
+          <span
+            title={url}
+            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-text-2"
+          >
             <span
               aria-hidden="true"
               className="inline-block h-1.5 w-1.5 rounded-full"
@@ -53,10 +56,9 @@ export function TrackToggle({ url, tracked, onTrackedChange }: Props) {
             size="sm"
             disabled={pending}
             aria-busy={pending}
-            className="text-[10px]"
             onClick={() => void run(false)}
           >
-            Untrack
+            {pending ? "Untracking…" : "Untrack"}
           </Button>
         </>
       ) : (
@@ -65,20 +67,20 @@ export function TrackToggle({ url, tracked, onTrackedChange }: Props) {
           size="sm"
           disabled={pending}
           aria-busy={pending}
-          className="text-[10px]"
+          title={url}
           onClick={() => void run(true)}
         >
-          Track daily
+          {pending ? "Tracking…" : "Track daily"}
         </Button>
       )}
       {error && (
         <span
-          role="status"
+          role="alert"
           className="inline-flex items-center gap-1 px-1.5 py-0.5 font-mono text-[10px] text-text-1"
           style={{ backgroundColor: "var(--score-weak-tint)" }}
         >
           <span aria-hidden="true" style={{ color: "var(--score-weak)" }}>
-            ▼
+            ●
           </span>
           {error}
         </span>

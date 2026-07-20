@@ -11,6 +11,12 @@ export const dynamic = "force-dynamic";
 /** DATA-CONTRACT §13: at most 10 tracked sites per owner. */
 const TRACKED_SITE_LIMIT = 10;
 const POST_IP_LIMIT_PER_MIN = 10;
+/**
+ * Deployment-wide ceiling. Owner tokens are freely mintable, so the per-owner
+ * cap alone cannot bound table growth or cron-queue pressure; this is the
+ * durable control (security review G2). Raise deliberately as real usage grows.
+ */
+const TRACKED_SITE_GLOBAL_LIMIT = 500;
 
 const urlSchema = z.object({ url: z.string().url().max(2048) });
 
@@ -83,12 +89,21 @@ export async function POST(request: Request): Promise<Response> {
   if (auditError) return json(503, { error: "cloud_read_failed" });
   if (!audit) return json(404, { error: "audit_required" });
 
+  // Count excludes the posted url so re-tracking an already-tracked site is
+  // idempotent 201 even at the limit (it consumes no new slot).
   const { count, error: countError } = await db
     .from("tracked_sites")
     .select("url", { count: "exact", head: true })
-    .eq("owner_hash", owner);
+    .eq("owner_hash", owner)
+    .neq("url", url);
   if (countError) return json(503, { error: "cloud_read_failed" });
   if ((count ?? 0) >= TRACKED_SITE_LIMIT) return json(409, { error: "limit_reached" });
+
+  const { count: globalCount, error: globalError } = await db
+    .from("tracked_sites")
+    .select("url", { count: "exact", head: true });
+  if (globalError) return json(503, { error: "cloud_read_failed" });
+  if ((globalCount ?? 0) >= TRACKED_SITE_GLOBAL_LIMIT) return json(503, { error: "capacity" });
 
   // PK collision = the site is already tracked — idempotent 201.
   const { data: siteRow, error: upsertError } = await db
