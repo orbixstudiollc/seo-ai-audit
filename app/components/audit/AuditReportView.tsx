@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { DetSignalId, DetSignalResult, Lens, ScoreBreakdown } from "@aeo/scoring";
 import type {
   AuditErrorKind,
@@ -11,11 +11,13 @@ import type {
 } from "@/lib/audit/types";
 import { isRubResult } from "@/lib/audit/signalMeta";
 import type { FindingItem } from "@/lib/audit/derive";
+import { buildActionPlan } from "@/lib/skills/actionPlan";
 import { LENSES, LENS_WEIGHTS } from "@aeo/scoring";
 import { Button } from "@/app/components/ui/Button";
 import { Card } from "@/app/components/ui/Card";
 import { ScoreRail } from "@/app/components/workbench/ScoreRail";
 import { SignalBreakdown } from "@/app/components/workbench/SignalBreakdown";
+import { ActionPlanPanel } from "./ActionPlanPanel";
 import { ReportHeader, ReportHeaderSkeleton } from "./ReportHeader";
 import { FindingsPanel } from "./FindingsPanel";
 import { RewritesPanel } from "./RewritesPanel";
@@ -76,6 +78,17 @@ export function AuditReportView({ phase, page, signals, scores, findings, rewrit
   const isTerminalError = phase === "error";
   const eeatResult = eeatFrom(scores);
 
+  // A prioritized, severity-ranked fix list synthesized from the same findings
+  // and scores already on screen (DATA-CONTRACT §10). Pure + deterministic
+  // apart from the generated-at stamp, which is not a render dependency.
+  const actionPlan = useMemo(
+    () =>
+      scores && findings
+        ? buildActionPlan({ generatedAt: new Date().toISOString(), url: page?.finalUrl, findings, scores })
+        : null,
+    [page?.finalUrl, scores, findings],
+  );
+
   function handleActivateFinding(item: FindingItem) {
     if (item.signalId) setOpenLens(primaryLensFor(item.signalId));
   }
@@ -127,6 +140,8 @@ export function AuditReportView({ phase, page, signals, scores, findings, rewrit
           <SignalBreakdown lens={openLens} breakdown={scores} />
         </Card>
       )}
+
+      {actionPlan && <ActionPlanPanel plan={actionPlan} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <FindingsPanel breakdown={scores} findings={findings} onActivateFinding={handleActivateFinding} />

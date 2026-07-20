@@ -34,6 +34,19 @@ test("renders the complete report from mock data alone", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Reject" })).toHaveCount(0);
 });
 
+test("renders a synthesized action plan from the report's findings and scores", async ({ page }) => {
+  await page.goto("/dev/mock-report");
+
+  // The "Action plan" card and its severity-ranked list render (DATA-CONTRACT §10).
+  await expect(page.getByRole("heading", { name: "Action plan" })).toBeVisible();
+  const plan = page.getByRole("list", { name: "Action plan" });
+  await expect(plan).toBeVisible();
+
+  // At least one item, and the mediocre mock's AI-Overview blocker surfaces as Critical.
+  await expect(plan.getByRole("listitem").first()).toBeVisible();
+  await expect(plan.getByText("Critical").first()).toBeVisible();
+});
+
 test("keyboard navigation moves through the findings list", async ({ page }) => {
   await page.goto("/dev/mock-report");
 

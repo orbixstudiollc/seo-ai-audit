@@ -2,6 +2,12 @@ import { LENSES, SIGNAL_IDS } from "@aeo/scoring";
 import type { AuditReport } from "@/lib/audit/types";
 import { buildFaqJsonLd } from "@/lib/audit/jsonld";
 import { SIGNAL_META } from "@/lib/audit/signalMeta";
+import {
+  actionPlanForReport,
+  actionPlanMarkdownLines,
+  type ActionEffort,
+  type ActionSeverity,
+} from "@/lib/skills/actionPlan";
 
 export interface AuditExportBundle {
   markdown: string;
@@ -20,11 +26,27 @@ function safeJsonLd(value: string): string {
   return value.replace(/</g, "\\u003c");
 }
 
+const SEVERITY_HTML_LABEL: Record<ActionSeverity, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
+const EFFORT_HTML_LABEL: Record<ActionEffort, string> = {
+  quick: "quick",
+  moderate: "moderate",
+  project: "project",
+};
+
 export function buildAuditMarkdown(report: AuditReport): string {
   const lensRows = LENSES.map((lens) => {
     const result = report.scores.lenses[lens];
     return `| ${lens === "aiOverview" ? "AI Overview" : lens.toUpperCase()} | ${result.score}/100 | ${result.capped ? "Yes" : "No"} |`;
   });
+  // Deterministic export: the plan's generated-at stamp is the page's fetch
+  // time, so re-exporting the same report yields byte-identical output.
+  const actionPlan = actionPlanForReport(report, report.page.fetchedAt);
   const weakSignals = SIGNAL_IDS
     .map((id) => ({ id, result: report.scores.signals[id] }))
     .filter(({ result }) => result.score < 70)
@@ -62,6 +84,10 @@ export function buildAuditMarkdown(report: AuditReport): string {
     "| --- | ---: | :---: |",
     ...lensRows,
     "",
+    "## Action plan",
+    "",
+    ...actionPlanMarkdownLines(actionPlan),
+    "",
     "## Findings",
     "",
     ...(findings.length ? findings : ["No priority findings were returned."]),
@@ -85,6 +111,10 @@ function buildAuditHtml(report: AuditReport, jsonLd: string | null): string {
     const name = lens === "aiOverview" ? "AI Overview" : lens.toUpperCase();
     return `<tr><th scope="row">${name}</th><td>${result.score}/100</td><td>${result.capped ? "Yes" : "No"}</td></tr>`;
   }).join("");
+  const actionPlan = actionPlanForReport(report, report.page.fetchedAt);
+  const actionItems = actionPlan.items
+    .map((item) => `<li><strong>${SEVERITY_HTML_LABEL[item.severity]}:</strong> ${escapeHtml(item.title)} <em>(${EFFORT_HTML_LABEL[item.effort]})</em> — ${escapeHtml(item.detail)}</li>`)
+    .join("");
   const findingItems = [
     ...report.findings.blockers.map((item) => `<li><strong>Blocker:</strong> ${escapeHtml(item.issue)}${item.location ? ` — ${escapeHtml(item.location)}` : ""}</li>`),
     ...report.findings.questionGaps.map((item) => `<li><strong>Question gap:</strong> ${escapeHtml(item)}</li>`),
@@ -113,6 +143,7 @@ function buildAuditHtml(report: AuditReport, jsonLd: string | null): string {
 <h1>AI-search audit: ${title}</h1>
 <dl><dt>URL</dt><dd><code>${escapeHtml(report.page.finalUrl)}</code></dd><dt>Audited</dt><dd>${escapeHtml(report.page.fetchedAt)}</dd><dt>Word count</dt><dd>${report.page.wordCount}</dd><dt>Model</dt><dd>${escapeHtml(report.scores.modelId)}</dd></dl>
 <section><h2>Scores</h2><table><thead><tr><th>Lens</th><th>Score</th><th>Capped</th></tr></thead><tbody>${lensRows}</tbody></table></section>
+<section><h2>Action plan</h2>${actionItems ? `<ul>${actionItems}</ul>` : "<p>No action items — every checked signal is in good shape.</p>"}</section>
 <section><h2>Findings</h2>${findingItems ? `<ul>${findingItems}</ul>` : "<p>No priority findings were returned.</p>"}</section>
 <section><h2>Optimization roadmap</h2>${roadmapItems ? `<ul>${roadmapItems}</ul>` : "<p>All signals scored 70 or above.</p>"}</section>
 <section><h2>Suggested rewrites</h2>${rewriteItems || "<p>No rewrites were returned.</p>"}</section>
