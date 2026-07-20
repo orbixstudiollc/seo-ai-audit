@@ -650,3 +650,8 @@ then W3-SHELL, then F3-OPS privacy/runbook.
 CONTEXT: working step-by-step in this workspace (kinshasa), no separate
 executor sessions for now. Push deny rule on `git push origin main` still
 active — branch pushes are fine.
+
+DEPLOYED: W5 is live — deployment `seo-ai-audit-a2zs7oks9` (Ready, 40s
+build). D-007 verified: `/` HTTP 200 with real hero HTML, `/robots.txt` 200,
+and the "Action plan" component confirmed present in the served /audit route
+chunk (`24ta7n7bowfrz.js`).
