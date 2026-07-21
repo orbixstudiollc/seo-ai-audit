@@ -777,3 +777,46 @@ seo-ai-audit-orbix2.vercel.app alias). D-007 smoke, all green over real HTTP:
 残: smoke left one tiny orphaned audit row under a throwaway owner (same as
 prior probes — harmless). Main still needs the user push
 (`env -u GH_TOKEN git push origin main`). Next phase: G3.
+
+---
+
+## 2026-07-21 (am/pm) — coordinator: G3 site hub
+
+**Done**
+- Investigated G3's prerequisites before implementing (Explore agent +
+  direct checks): W3-SHELL (SkillPanel) and W7-AGENT (orchestrator) are both
+  genuinely unbuilt — zero code, only DATA-CONTRACT §8/§9 spec text. Recorded
+  the scope adjustment as D-022 rather than silently shipping less than the
+  plan promised.
+- Shipped `/site/[host]` (branch `wsp-g3-site-hub`): one domain's growth
+  trend, tracked-site toggle, current action plan, technical crawl panel,
+  and audit history — composing only pieces that already exist (zero new
+  API routes, zero new migrations). New: `lib/growth/burndown.ts` (issue
+  trend + exact resolved/new diff between the two latest full reports),
+  `app/hooks/useMergedHistory.ts` (extracted from `GrowthOverview`, reused by
+  both), `app/components/growth/LensScoreGrid.tsx` (extracted from
+  `SiteGrowthCard`, reused by both).
+- Adversarial code-reviewer pass found 1 HIGH + 3 MEDIUM, all fixed:
+  action-plan item ids were positional (`common-${i}` etc.) rather than
+  content-derived, which silently broke the "N resolved · M new" diff
+  whenever `commonFindings`' count-sort reordered issues between audits —
+  fixed with a `stableId()` helper in `lib/skills/actionPlan.ts`, plus
+  regression tests at both the unit level (through real `actionPlanForSite`
+  output) and e2e level (asserting the rendered caption) that didn't exist
+  before. Also fixed two narrower state-staleness gaps
+  (`technicalPages`/`dailySeries` not resetting on record/domain change).
+- Gates: lint ✅ typecheck ✅ 375 unit ✅ 46 e2e ✅ build ✅. Merged to `main`
+  locally.
+
+**Next**
+1. USER: push main (`env -u GH_TOKEN git push origin main`).
+2. Say "deploy" and I'll ship it + run the D-007 smoke (open `/site/<a
+   domain you've audited>` in production, confirm the hub renders).
+3. G4 (GSC/GA4 daily ingestion) is next in the growth plan — depends on
+   W2-GOOGLE (OAuth vault), still queued.
+
+**Context**: the fixed `stableId()` helper changes `ActionItem.id` values
+for blockers/question-gaps/common-findings across the whole app (not just
+the new hub) — this is a bug fix, not a breaking contract change (§10 never
+promised a specific id format, only that ids exist), but worth knowing if a
+future session sees action-plan ids that look different from before.

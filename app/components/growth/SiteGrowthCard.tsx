@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { LENS_META, LENS_ORDER } from "@/lib/audit/signalMeta";
 import { scoreBand } from "@/lib/audit/scoreScale";
 import { averageScore } from "@/lib/history";
 import type { DomainGroup } from "@/lib/growth/aggregate";
 import { seriesScores } from "@/lib/growth/series";
 import type { GrowthSnapshot } from "@/lib/growth/types";
+import { LensScoreGrid } from "./LensScoreGrid";
 import { TrendSparkline } from "./TrendSparkline";
 import { TrackToggle } from "./TrackToggle";
 
@@ -19,7 +19,7 @@ export interface SiteTracking {
 }
 
 /** Delta chip: direction glyph + signed number, score-scale colors with text. */
-function DeltaChip({ delta }: { delta: number | null }) {
+export function DeltaChip({ delta }: { delta: number | null }) {
   if (delta === null || delta === 0) return null;
   const rising = delta > 0;
   // Band color rides on the decorative glyph only; the number stays primary
@@ -56,7 +56,11 @@ export function SiteGrowthCard({ group, tracking }: { group: DomainGroup; tracki
     <li className="flex flex-col overflow-hidden rounded-[var(--radius-lg,5px)] border border-line-strong bg-surface-1 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
       <div className="flex items-start justify-between gap-3 p-4">
         <div className="min-w-0">
-          <h3 className="truncate text-base font-semibold tracking-tight">{group.domain}</h3>
+          <h3 className="truncate text-base font-semibold tracking-tight">
+            <Link href={`/site/${encodeURIComponent(group.domain)}`} className="hover:underline">
+              {group.domain}
+            </Link>
+          </h3>
           <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-text-3">
             {group.auditCount} audit{group.auditCount === 1 ? "" : "s"} · last{" "}
             {new Date(group.lastAuditedAt).toLocaleDateString()}
@@ -102,25 +106,7 @@ export function SiteGrowthCard({ group, tracking }: { group: DomainGroup; tracki
         </div>
       )}
 
-      {group.latestScores && (
-        <div className="grid grid-cols-4 gap-px border-t border-line bg-line">
-          {LENS_ORDER.map((lens) => (
-            <div key={lens} className="flex items-center justify-between bg-surface-2 px-2.5 py-1.5">
-              <span className="font-mono text-[9px] uppercase tracking-wider text-text-3">
-                {LENS_META[lens].code}
-              </span>
-              <strong className="inline-flex items-center gap-1 font-mono text-sm tabular-nums text-text-1">
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: scoreBand(group.latestScores![lens]).colorVar }}
-                />
-                {group.latestScores![lens]}
-              </strong>
-            </div>
-          ))}
-        </div>
-      )}
+      {group.latestScores && <LensScoreGrid scores={group.latestScores} />}
 
       {tracking && (
         <div className="border-t border-line px-4 py-2">

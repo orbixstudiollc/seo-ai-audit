@@ -108,3 +108,17 @@ propose; the coordinator records.
   rendered read-only at public `/s/<token>` (noindex). Making all reports
   public-by-default would leak what users audit. Revocation = DELETE row;
   the link dies instantly.
+- **D-022** 2026-07-21 — **G3 ships the site hub now; SkillPanel generalization
+  and the agent orchestrator wait for their prerequisites.** The growth plan's
+  G3 text assumed W3-SHELL (a generalized `SkillPanel`) and W7-AGENT (the
+  "run everything" orchestrator) already existed to mount onto the site hub.
+  Investigation confirmed neither exists anywhere in the codebase — both are
+  still DATA-CONTRACT spec text (§8/§9) with zero implementation, and W7-AGENT
+  is explicitly gated on W3-SHELL in the platform plan. Building either against
+  a single caller (the hub) would be a speculative framework, not a feature.
+  Shipped instead: `/site/[host]` composing pieces that DO exist today
+  (growth series, tracked-site toggle, the action-plan synthesizer, the
+  existing `TechnicalSeoPanel`) — zero new API routes, zero new migrations.
+  SkillPanel and the orchestrator remain queued exactly as PROJECT-STATUS
+  already listed them; this decision just records that G3-as-shipped is
+  narrower than G3-as-planned, and why.
