@@ -897,3 +897,39 @@ SK1-BE notes for SK3: each runSkill module is directly callable by the
 orchestrator for inline completions; routeHelpers' constructors are the
 envelope factories. SK1-FE notes: SkillPanel's initialTaskId prop is the
 handoff/reopen mode the agent report embeds.
+
+---
+
+## 2026-07-21 (pm) — coordinator: skills wave SK2–SK4 complete, deployed + live-validated
+
+**Done**
+- SK2 (`f765843`): four paid DFS skill routes + paidSkillRunner; full
+  agent-mode UI mock-first. SK3 (`383f59e`): the real orchestrator
+  (/api/audit/agent, planOnly dry run, cap-enforced plans, crash-safe
+  incremental persistence), agent_runs migration, technical-crawl §8 GET,
+  saved agent reports + hub mounting; adversarial review found 2 HIGH
+  (unguarded run body; wall-clock skips stranding "Queued" rows) — both
+  fixed with regression tests. SK4 (`f7ba1c3`): competitor compare.
+- Deployed twice (SK0–SK3, then SK4 + flag flips). Migration
+  202607210007 applied via the Supabase connector (RLS/grants verified by
+  probe). Live smokes all green: schema + ai-access ($0), agent planOnly
+  (plan→done, correct paid-skill dropping, zero spend), backlinks/serp/labs
+  (real DataForSEO data, ledger estimates settled to actuals, repeat POST
+  reused: true with NO new ledger row — F2→SK2 spend pipeline proven in
+  production). /dev/mock-skills 404s in prod. 7 registry flags flipped.
+- Gates at wave end: 693 unit / 56 e2e / lint / typecheck / build.
+
+**Next**
+1. USER: push main (`env -u GH_TOKEN git push origin main`).
+2. Compare live smoke (one keyword, ~$0.05) → flip its registry flag.
+3. serp/keywords panels need a keyword-input slot in SkillPanel idle state
+   (deferred by design) — small follow-up when wanted.
+4. G4 (GSC/GA4) next in the growth plan — still blocked on the user's
+   Google Cloud OAuth setup (F3-OPS).
+5. LOW residual: non-uuid technical-crawl GET id → 503 instead of 404.
+
+**Context**: smoke leftovers under a discarded throwaway owner in prod
+(one audit record, four provider task rows, ~$0.05 ledger spend) —
+harmless, same pattern as every prior smoke. Optional envs
+AGENT_MAX_SKILLS/AGENT_MAX_RUN_USD/AGENT_WALL_CLOCK_MS unset (safe
+defaults). claude-seo reference clone now v2.2.4.

@@ -6,7 +6,7 @@ updates this file before wrapping up (see the closing ritual in
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
 Last updated: 2026-07-21 (pm) · by: coordinator session (Fable) — skills wave
-SK0+SK1 merged; SK2 building · branch `main`
+SK0–SK4 complete, deployed + live-validated · branch `main`
 
 ## Product
 
@@ -80,7 +80,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | F3-OPS | Google consent-screen verification, privacy policy page, env rollout | Sonnet + user | 🧾 queued |
 | W1-DFS | DataForSEO serp/keywords/backlinks/labs modules + routes | Sonnet | 🧾 queued (after F1; F2 stubs OK) |
 | W2-GOOGLE | OAuth vault: oauth_states, google_connections (AES-GCM), connect/disconnect, claim-RPC update | Opus | 🧾 queued |
-| **Skills wave SK0–SK4** (plan: `~/.claude/plans/shimmying-launching-elephant.md`, D-023) | ✅ SK0 contract v1.5 + types (`11f60d2`) · ✅ SK1 five $0 skill backends + SkillPanel shell/renderers/mocks/dev page (`63d42c4`, 573 unit / 51 e2e, `docs/phases/sk1-skills-report.md`) · 🔄 SK2 paid DFS skills ∥ agent-mode UI (building) · 🧾 SK3 orchestrator + hub · 🧾 SK4 compare | Sonnet workers, Fable coordinates | 🔄 in progress |
+| **Skills wave SK0–SK4** (plan: `~/.claude/plans/shimmying-launching-elephant.md`, D-023) | ✅ SK0 contract v1.5 + types (`11f60d2`) · ✅ SK1 five $0 skills + SkillPanel shell (`63d42c4`) · ✅ SK2 paid DFS skills + agent-mode UI (`f765843`) · ✅ SK3 full orchestrator + agent_runs + hub/persistence, adversarial review 2 HIGH fixed (`383f59e`) · ✅ SK4 competitor compare (`f7ba1c3`) — **deployed + live-validated 2026-07-21**: migration 202607210007 applied; agent planOnly, 3 paid skills (ledger actuals + fingerprint reuse proven), 2 free skills all smoked in prod; 7 registry flags on (serp/keywords await input UX, compare awaits its smoke). Gates 693 unit / 56 e2e. Reports `docs/phases/sk{1,2,3,4}-*.md` | Sonnet workers, Fable coordinates | ✅ done |
 | W3-SHELL | SkillPanel shell + /dev/mock-skills + agent mode entry stub | — | ✅ absorbed into SK1/SK2 |
 | W4-DET-SKILLS | schema/sitemap/hreflang/images route+renderer pairs (SXO deferred, ai-access added) | — | ✅ absorbed into SK1 |
 | W5-ACTION-PLAN | 4-tier severity synthesizer over existing data (§10) | executor + coordinator wrap-up | ✅ done — merged, all gates green (`docs/phases/w5-action-plan-report.md`) |
