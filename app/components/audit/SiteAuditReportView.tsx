@@ -50,9 +50,10 @@ const SITE_ERROR_LABEL: Record<SiteErrorKind, string> = {
   server: "Something went wrong running the site audit.",
 };
 
-function pageStatus(page: PageRunState | undefined): { label: string; glyph: string; colorVar: string } {
+function pageStatus(page: PageRunState | undefined, settled: boolean): { label: string; glyph: string; colorVar: string } {
   if (!page || page.phase === "idle" || page.phase === "connecting") {
-    return { label: "Queued", glyph: "·", colorVar: "var(--text-3)" };
+    // After the run settles, a page with no entry was never started (time budget).
+    return { label: settled ? "Not started" : "Queued", glyph: "·", colorVar: "var(--text-3)" };
   }
   if (page.phase === "error") return { label: "Failed", glyph: "✕", colorVar: "var(--score-weak)" };
   if (page.phase === "done") return { label: "Done", glyph: "✓", colorVar: "var(--score-strong)" };
@@ -76,7 +77,7 @@ export function SiteAuditReportView(props: Props) {
   const { phase, rootUrl, method, discoveredPages, truncated, pages, pageOrder, rollup, stoppedEarly, error, onRetry, onRetryFailed, retryingFailed = false, technicalPages = null } = props;
   const [openPageUrl, setOpenPageUrl] = useState<string | null>(null);
   const router = useRouter();
-  const failedPageCount = pageOrder.filter((url) => pages[url]?.phase === "error").length;
+  const incompletePageCount = pageOrder.filter((url) => pages[url]?.phase !== "done").length;
   const canRetryFailed = phase === "done" || phase === "error";
 
   // Site-level action plan from the rollup's recurring findings + worst pages
@@ -148,20 +149,20 @@ export function SiteAuditReportView(props: Props) {
             </span>
           }
         >
-          {canRetryFailed && failedPageCount > 0 && onRetryFailed && (
+          {canRetryFailed && incompletePageCount > 0 && onRetryFailed && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-2 px-3.5 py-3">
               <p className="text-xs text-text-2">
-                {failedPageCount} failed page{failedPageCount === 1 ? "" : "s"}. Successful pages will not be charged or rerun.
+                {incompletePageCount} page{incompletePageCount === 1 ? "" : "s"} failed or never started. Successful pages will not be charged or rerun.
               </p>
               <Button size="sm" variant="outline" onClick={onRetryFailed} disabled={retryingFailed}>
-                {retryingFailed ? "Retrying failed pages…" : `Retry ${failedPageCount} failed page${failedPageCount === 1 ? "" : "s"}`}
+                {retryingFailed ? "Retrying remaining pages…" : `Retry ${incompletePageCount} remaining page${incompletePageCount === 1 ? "" : "s"}`}
               </Button>
             </div>
           )}
           <ul className="divide-y divide-line">
             {pageOrder.map((url) => {
               const page = pages[url];
-              const status = pageStatus(page);
+              const status = pageStatus(page, canRetryFailed);
               const score = overallScore(page);
               const canOpen = page?.phase === "done" || page?.phase === "error";
               return (
@@ -213,7 +214,7 @@ export function SiteAuditReportView(props: Props) {
           <p className="font-mono text-xs text-text-2">
             Stopped early ({stoppedEarly.reason}) — {stoppedEarly.pagesRemaining} page
             {stoppedEarly.pagesRemaining === 1 ? "" : "s"} not audited. Results below are from the pages that
-            finished.
+            finished. Use “Retry remaining pages” above to audit them without rerunning successful pages.
           </p>
         </div>
       )}

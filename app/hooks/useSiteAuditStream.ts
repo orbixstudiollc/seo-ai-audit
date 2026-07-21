@@ -262,7 +262,8 @@ export function useSiteAuditStream(url: string, limit?: number): UseSiteAuditStr
 
   const retry = useCallback(() => setRequest((current) => ({ kind: "full", attempt: current.attempt + 1 })), []);
   const retryFailedPages = useCallback(() => {
-    const pages = state.pageOrder.filter((pageUrl) => state.pages[pageUrl]?.phase === "error");
+    // Errored pages AND pages the wall-clock budget never started (no state entry).
+    const pages = state.pageOrder.filter((pageUrl) => state.pages[pageUrl]?.phase !== "done");
     if (pages.length === 0 || state.retryingFailed || (state.phase !== "done" && state.phase !== "error")) return;
     setRequest((current) => ({ kind: "failed", pages, attempt: current.attempt + 1 }));
   }, [state.pageOrder, state.pages, state.phase, state.retryingFailed]);

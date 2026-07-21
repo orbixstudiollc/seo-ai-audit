@@ -86,7 +86,8 @@ function SavedSiteReportClient({ report }: { report: SavedSiteReport }) {
 
   const retryFailedPages = useCallback(() => {
     if (runningRef.current || !siteState.rootUrl) return;
-    const urls = siteState.pageOrder.filter((url) => siteState.pages[url]?.phase === "error");
+    // Errored pages AND pages the wall-clock budget never started (no state entry).
+    const urls = siteState.pageOrder.filter((url) => siteState.pages[url]?.phase !== "done");
     if (urls.length === 0) return;
 
     runningRef.current = true;
