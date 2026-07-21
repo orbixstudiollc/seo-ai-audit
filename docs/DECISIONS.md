@@ -122,3 +122,17 @@ propose; the coordinator records.
   SkillPanel and the orchestrator remain queued exactly as PROJECT-STATUS
   already listed them; this decision just records that G3-as-shipped is
   narrower than G3-as-planned, and why.
+- **D-023** 2026-07-21 — **Skills + agent-mode wave (SK0–SK4) supersedes
+  D-022's deferral.** The SkillPanel generalization and agent orchestrator
+  now have a full wave behind them (10+ panel call sites, the orchestrator,
+  the hub, saved agent reports), so building them is no longer speculative.
+  Scope per the approved plan: W3-SHELL + W4-DET-SKILLS + W1-DFS (paid) +
+  full W7 + W8 compare subset. Additive contract v1.5: `"ai-access"` SkillId
+  (llms.txt/AI-crawler checks — `"sxo"` stays reserved for real SXO),
+  §8.1 typed result payloads, `planOnly` request flag on the agent route.
+  Drift skill stays deferred (G2 snapshots + G3 burndown cover it; revisit
+  with §12 regressions). Model policy for this wave (user directive):
+  Sonnet for ALL build agents; the orchestrator gets a coordinator
+  adversarial review pass in lieu of an Opus builder. Business-type
+  detection is deterministic (claude-seo's own signal table ported), not
+  LLM classification.
