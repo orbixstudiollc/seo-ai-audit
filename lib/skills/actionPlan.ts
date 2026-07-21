@@ -277,6 +277,9 @@ export interface ActionPlanSources {
   scores?: ScoreBreakdown | null;
   rollup?: SiteRollup | null;
   technicalPages?: readonly TechnicalIssuePage[] | null;
+  /** Pre-built items from skill/agent runs (each skill's toActionItems());
+   * merged, sorted, and bounded with everything else. */
+  extraItems?: readonly ActionItem[] | null;
 }
 
 /**
@@ -311,6 +314,7 @@ export function buildActionPlan(sources: ActionPlanSources): ActionPlan {
   if (sources.technicalPages && sources.technicalPages.length > 0) {
     items.push(...itemsFromTechnical(sources.technicalPages));
   }
+  if (sources.extraItems && sources.extraItems.length > 0) items.push(...sources.extraItems);
 
   return {
     items: sortItems(items).slice(0, MAX_ACTION_ITEMS),

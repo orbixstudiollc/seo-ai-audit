@@ -269,6 +269,7 @@ and the reserve→call→settle flow in `app/api/technical-audit/route.ts`.
 // lib/skills/types.ts (new home; TechnicalAuditTask aliases onto this later)
 export type SkillId =
   | "schema" | "sitemap" | "hreflang" | "images" | "sxo"
+  | "ai-access"   // v1.5 additive: llms.txt + AI-crawler robots access (distinct from future real SXO)
   | "serp" | "keywords" | "backlinks" | "labs"
   | "technical-crawl" | "gsc" | "ga4" | "action-plan" | "brief" | "compare";
 
@@ -317,6 +318,59 @@ free deterministic skills MAY skip persistence and return `complete` inline.
 complete `SkillTask` in every lifecycle state used by its renderer, plus
 `/dev/mock-skills` renders all of them (W3-SHELL owns the page).
 
+### 8.1 Typed result payloads (v1.5, additive — SK0, 2026-07-21)
+
+`SkillTask.result` stays opaque to the shell; these are the per-skill typed
+payloads at `resultVersion: 1` (source of truth: `lib/skills/types.ts`;
+renderers guard on `resultVersion` and degrade on mismatch). All arrays are
+server-bounded; all strings truncated server-side.
+
+```ts
+export interface SchemaSkillResult {
+  detected: Array<{ type: string; valid: boolean; errors: string[]; warnings: string[] }>;
+  missingRecommended: string[];
+  generated: Array<{ type: string; jsonld: string }>;
+}
+export interface SitemapSkillResult {
+  sitemapUrl: string | null; declaredInRobots: boolean; urlCount: number;
+  sameOriginCount: number;
+  issues: Array<{ code: string; severity: "error" | "warning"; detail: string }>;
+}
+export interface HreflangSkillResult {
+  tags: Array<{ hreflang: string; href: string }>;
+  checks: Array<{ code: string; pass: boolean; detail: string; urls: string[] }>;
+}
+export interface ImagesSkillResult {
+  imageCount: number;
+  missingAlt: string[];                       // src urls, ≤ 20
+  oversized: Array<{ url: string; bytes: number }>;   // ≤ 10 (HEAD-sampled)
+  issues: Array<{ code: string; count: number; urls: string[] }>;
+}
+export interface AiAccessSkillResult {
+  crawlers: Array<{ name: string; allowed: boolean | "unspecified" }>;
+  llmsTxt: { present: boolean; hasSections: boolean; bytes: number };
+}
+export interface SerpSkillResult {
+  keyword: string; capturedAt: string;
+  entries: Array<{ rank: number; url: string; title: string; domain: string; isOwn: boolean }>; // ≤ 20
+}
+export interface KeywordsSkillResult {
+  rows: Array<{ keyword: string; volume: number | null; cpc: number | null; competition: number | null }>; // ≤ 100
+}
+export interface LabsSkillResult {
+  rows: Array<{ keyword: string; position: number | null; volume: number | null; url: string | null }>; // ≤ 100
+}
+export interface BacklinksSkillResult {
+  totalBacklinks: number; referringDomains: number; rank: number | null;
+  brokenBacklinks: number; referringDomainsNofollow: number;
+}
+export interface CompareSkillResult {
+  keyword: string;
+  mine: { url: string; scores: Record<Lens, number> | null };
+  competitors: Array<{ rank: number; url: string; scores: Record<Lens, number> | null; topFindings: string[] }>; // ≤ 3
+}
+```
+
 ## 9. Agent-mode run (v1.2, additive)
 
 One orchestrated run = SSE stream (same wire framing as §2) + durable run row.
@@ -336,6 +390,13 @@ export type AgentStreamEvent =
   | { type: "agent:done" }
   | { type: "agent:error"; kind: SkillErrorKind | "run_cap_exceeded"; message: string };
 ```
+
+Request shape (v1.5 additive): `POST /api/audit/agent { url, planOnly?: true }`
+— with `planOnly` the stream emits `agent:plan` → `agent:done` with ZERO
+fan-out and $0 spend (the confirm-gate dry run); the confirmed run's own
+`agent:plan` is authoritative and re-seeds the client. `GET ?runId=` returns
+the durable run row and lazily reconciles newly-completed pending tasks.
+The §9 event union itself is unchanged.
 
 Invariants: `agent:plan` is always first (its `estCostUsd` sum is shown to the
 user BEFORE fan-out — explicit-start precedent from TechnicalSeoPanel);
