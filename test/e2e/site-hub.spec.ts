@@ -106,8 +106,10 @@ test("site hub shows growth trend, action plan, technical panel, and history for
 
   // The per-domain SkillPanel checks: every HUB_SKILL_IDS entry was
   // flag-flipped after its live deploy smoke (SK-wave discipline), so
-  // each renders its idle panel with an explicit-start button.
-  for (const label of ["Schema", "Sitemap", "Hreflang", "Images", "AI access", "Backlinks", "Labs", "SERP", "Keywords"]) {
+  // each renders its idle panel with an explicit-start button. Compare
+  // is a dedicated panel (SSE, not SkillPanel's POST-then-poll) mounted
+  // right after this loop's checks — same flag-flip discipline (SK6).
+  for (const label of ["Schema", "Sitemap", "Hreflang", "Images", "AI access", "Backlinks", "Labs", "SERP", "Keywords", "Compare"]) {
     await expect(page.getByRole("heading", { name: label, level: 2 })).toBeVisible();
   }
 });
@@ -148,6 +150,95 @@ test("paid skill panels POST the owning auditId, and keyword panels gate on inpu
   await expect(serpRun).toBeDisabled();
   await page.getByLabel("Keyword for SERP").fill("seo audit tool");
   await expect(serpRun).toBeEnabled();
+});
+
+test("compare panel streams progress, renders CompareResult + cost line, and posts the owner-gated body", async ({ page }) => {
+  let compareBody: { auditId?: string; keyword?: string; topN?: number } | null = null;
+  const doneTask = {
+    id: "mock-compare-1", skillId: "compare",
+    scope: { kind: "keyword", keyword: "seo audit tool" }, status: "complete",
+    createdAt: "2026-07-21T00:00:00.000Z", updatedAt: "2026-07-21T00:00:05.000Z",
+    costUsd: 0.05, resultVersion: 1,
+    result: {
+      keyword: "seo audit tool",
+      mine: { url: ROOT, scores: { aeo: 70, geo: 65, citability: 60, aiOverview: 55 } },
+      competitors: [
+        {
+          rank: 1, url: "https://rival.test/best-seo-tool",
+          scores: { aeo: 80, geo: 75, citability: 70, aiOverview: 65 },
+          topFindings: ["Has FAQ schema"],
+        },
+      ],
+    },
+  };
+
+  await page.route("/api/skills/compare", async (route) => {
+    // The real route is owner-gated (401 without the header) — a consumer
+    // that regresses to plain fetch must fail here, not only in production
+    // smokes (same house pattern as agent-audit.spec.ts's routeAgentStream).
+    if (!route.request().headers()["x-seo-audit-owner"]) {
+      await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "invalid_owner" }) });
+      return;
+    }
+    compareBody = (await route.request().postDataJSON()) as { auditId?: string; keyword?: string; topN?: number };
+    // Hold the response open briefly so the role="status" running box (shown
+    // before the first frame arrives) is genuinely observable — Playwright's
+    // route.fulfill delivers its whole body atomically in one chunk, so
+    // asserting a specific mid-stream compare:progress count would be racy.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const events = [
+      { type: "compare:progress", completed: 0, total: 1 },
+      { type: "compare:progress", completed: 1, total: 1 },
+      { type: "compare:done", task: doneTask },
+    ];
+    await route.fulfill({
+      status: 200, contentType: "text/event-stream",
+      body: events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""),
+    });
+  });
+
+  await seedFullDomainAndOpenHub(page);
+  const compareRun = page.getByRole("button", { name: "Run comparison" });
+  await expect(compareRun).toBeDisabled();
+  await page.getByLabel("Keyword for Compare").fill("seo audit tool");
+  await expect(compareRun).toBeEnabled();
+  await compareRun.click();
+
+  await expect(page.getByText("Comparing against competitors…", { exact: true })).toBeVisible();
+  // "#1 rival.test" appears twice (table header + topFindings section label) —
+  // the columnheader role disambiguates.
+  await expect(page.getByRole("columnheader", { name: "#1 rival.test" })).toBeVisible();
+  await expect(page.getByText("Has FAQ schema", { exact: true })).toBeVisible();
+  await expect(page.getByText("Cost: $0.0500", { exact: true })).toBeVisible();
+
+  // toMatchObject (not property access): TS can't see the closure write and
+  // narrows the variable to its initial null.
+  expect(compareBody).toMatchObject({ auditId: NEW_ID, keyword: "seo audit tool", topN: 3 });
+});
+
+test("compare panel shows the budget-exceeded alert copy for a failed done task", async ({ page }) => {
+  await page.route("/api/skills/compare", async (route) => {
+    const events = [
+      {
+        type: "compare:done",
+        task: {
+          id: "mock-compare-failed", skillId: "compare", scope: { kind: "keyword", keyword: "seo audit tool" },
+          status: "failed", createdAt: "2026-07-21T00:00:00.000Z", updatedAt: "2026-07-21T00:00:00.000Z",
+          costUsd: 0, resultVersion: 1, result: null,
+          error: { kind: "budget_exceeded", message: "This run would exceed the monthly skill budget." },
+        },
+      },
+    ];
+    await route.fulfill({
+      status: 200, contentType: "text/event-stream",
+      body: events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""),
+    });
+  });
+
+  await seedFullDomainAndOpenHub(page);
+  await page.getByLabel("Keyword for Compare").fill("seo audit tool");
+  await page.getByRole("button", { name: "Run comparison" }).click();
+  await expect(page.getByText("Budget limit reached — this check was not run.", { exact: true })).toBeVisible();
 });
 
 test("site hub's Run agent audit button navigates to the agent audit page for the domain's latest URL", async ({ page }) => {

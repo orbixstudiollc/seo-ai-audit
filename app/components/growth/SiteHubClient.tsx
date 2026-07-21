@@ -21,6 +21,7 @@ import { ActionPlanPanel } from "@/app/components/audit/ActionPlanPanel";
 import { TechnicalSeoPanel } from "@/app/components/audit/TechnicalSeoPanel";
 import { HUB_SKILL_IDS, SKILL_REGISTRY } from "@/app/components/skills/registry";
 import { SkillPanel } from "@/app/components/skills/SkillPanel";
+import { ComparePanel } from "@/app/components/skills/ComparePanel";
 import { DeltaChip } from "./SiteGrowthCard";
 import { LensScoreGrid } from "./LensScoreGrid";
 import { TrackToggle } from "./TrackToggle";
@@ -238,6 +239,10 @@ export function SiteHubClient({ host }: { host: string }) {
           labelAs="h2"
         />
       ))}
+
+      {/* Same report-less-domain fallback as the HUB_SKILL_IDS loop above —
+          the route needs an owned audit_runs row, not a saved report. */}
+      <ComparePanel auditId={latestRecord?.id ?? group.latest.id} labelAs="h2" />
 
       <Card label="Audit history" labelAs="h2">
         <ul className="divide-y divide-line">

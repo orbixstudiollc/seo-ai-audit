@@ -24,7 +24,7 @@ function derivePhase(task: SkillTask | null): Phase {
   return "loading"; // creating | queued | running
 }
 
-const ERROR_COPY: Record<SkillErrorKind, string> = {
+export const ERROR_COPY: Record<SkillErrorKind, string> = {
   invalid_input: "This check couldn't run — the input looked invalid.",
   fetch_failed: "Couldn't fetch the page to run this check.",
   unsupported_content: "This page's content isn't supported by this check.",

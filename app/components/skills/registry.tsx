@@ -146,7 +146,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run comparison",
     runningLabel: "Comparing against competitors…",
     scopeKind: "keyword",
-    enabled: false,
+    enabled: true,
     Result: CompareResult,
   },
   // Added for SK2's agent-mode handoff row (AgentReportView embeds SkillPanel
