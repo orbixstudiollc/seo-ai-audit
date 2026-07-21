@@ -229,6 +229,9 @@ export function SiteHubClient({ host }: { host: string }) {
           key={skillId}
           skillId={skillId}
           scope={{ kind: SKILL_REGISTRY[skillId]?.scopeKind ?? "site", url: skillScopeUrl }}
+          // Paid routes require an owned audit as their ownership/ledger
+          // anchor; free routes ignore it. Without it, paid Run buttons 400.
+          auditId={latestRecord?.id}
           labelAs="h2"
         />
       ))}

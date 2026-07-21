@@ -104,12 +104,50 @@ test("site hub shows growth trend, action plan, technical panel, and history for
   await expect(page.getByRole("heading", { name: "Audit history" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open report" })).toHaveCount(2);
 
-  // The per-domain SkillPanel checks: the seven HUB_SKILL_IDS entries were
-  // flag-flipped after their live deploy smokes (SK-wave discipline), so
+  // The per-domain SkillPanel checks: every HUB_SKILL_IDS entry was
+  // flag-flipped after its live deploy smoke (SK-wave discipline), so
   // each renders its idle panel with an explicit-start button.
-  for (const label of ["Schema", "Sitemap", "Hreflang", "Images", "AI access", "Backlinks", "Labs"]) {
+  for (const label of ["Schema", "Sitemap", "Hreflang", "Images", "AI access", "Backlinks", "Labs", "SERP", "Keywords"]) {
     await expect(page.getByRole("heading", { name: label, level: 2 })).toBeVisible();
   }
+});
+
+test("paid skill panels POST the owning auditId, and keyword panels gate on input", async ({ page }) => {
+  // Regression for a real production bug: SkillPanel used to POST { scope }
+  // only, but every PAID route requires { auditId, scope } for ownership +
+  // ledger anchoring — the hub's paid Run buttons 400'd. The mock rejects
+  // auditId-less requests exactly like the real route.
+  let backlinksBody: { auditId?: string; scope?: unknown } | null = null;
+  await page.route("/api/skills/backlinks", async (route) => {
+    backlinksBody = (await route.request().postDataJSON()) as { auditId?: string; scope?: unknown };
+    if (!backlinksBody.auditId) {
+      await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "invalid_scope" }) });
+      return;
+    }
+    await route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({ task: {
+        id: "mock-backlinks-live", skillId: "backlinks",
+        scope: { kind: "site", url: ROOT }, status: "complete",
+        createdAt: "2026-07-21T00:00:00.000Z", updatedAt: "2026-07-21T00:00:00.000Z",
+        costUsd: 0.02, resultVersion: 1,
+        result: { totalBacklinks: 10, referringDomains: 5, rank: 100, brokenBacklinks: 1, referringDomainsNofollow: 2 },
+      }, reused: false }),
+    });
+  });
+
+  await seedFullDomainAndOpenHub(page);
+  await page.getByRole("button", { name: "Run backlink pull" }).click();
+  await expect(page.getByText("Referring domains")).toBeVisible();
+  // toMatchObject (not property access): TS can't see the closure write and
+  // narrows the variable to its initial null.
+  expect(backlinksBody).toMatchObject({ auditId: NEW_ID });
+
+  // Keyword-scoped panels: Run is disabled until the keyword input is filled.
+  const serpRun = page.getByRole("button", { name: "Run SERP pull" });
+  await expect(serpRun).toBeDisabled();
+  await page.getByLabel("Keyword for SERP").fill("seo audit tool");
+  await expect(serpRun).toBeEnabled();
 });
 
 test("site hub's Run agent audit button navigates to the agent audit page for the domain's latest URL", async ({ page }) => {

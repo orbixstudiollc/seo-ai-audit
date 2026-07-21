@@ -98,7 +98,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run SERP pull",
     runningLabel: "Pulling live rankings…",
     scopeKind: "keyword",
-    enabled: false,
+    enabled: true,
     Result: SerpResult,
   },
   keywords: {
@@ -110,7 +110,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run keyword pull",
     runningLabel: "Pulling keyword metrics…",
     scopeKind: "keyword",
-    enabled: false,
+    enabled: true,
     Result: KeywordsResult,
   },
   labs: {
@@ -168,7 +168,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
 };
 
 /** The site-hub tab's per-domain checks (DATA-CONTRACT §8 hub mocks). */
-export const HUB_SKILL_IDS: SkillId[] = ["schema", "sitemap", "hreflang", "images", "ai-access", "backlinks", "labs"];
+export const HUB_SKILL_IDS: SkillId[] = ["schema", "sitemap", "hreflang", "images", "ai-access", "backlinks", "labs", "serp", "keywords"];
 
 /** Shared Card aside for a skill's external provider — used by SkillPanel and
  * the /dev/mock-skills page so both stay in sync with the registry. */

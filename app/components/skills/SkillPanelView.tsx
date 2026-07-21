@@ -10,6 +10,9 @@ type Props = {
   configured: boolean;
   error: string | null;
   onStart?: () => void;
+  /** Keyword-scoped skills only: controlled input rendered in the idle state. */
+  keywordValue?: string;
+  onKeywordChange?: (value: string) => void;
 };
 
 type Phase = "idle" | "loading" | "complete" | "failed";
@@ -36,8 +39,10 @@ const ERROR_COPY: Record<SkillErrorKind, string> = {
  * caller wraps it, per DATA-CONTRACT §8). Mirrors TechnicalSeoPanel's
  * idle/loading/complete/failed states, generalized across every skill.
  */
-export function SkillPanelView({ entry, task, ready, busy, configured, error, onStart }: Props) {
+export function SkillPanelView({ entry, task, ready, busy, configured, error, onStart, keywordValue, onKeywordChange }: Props) {
   const phase = derivePhase(task);
+  const needsKeyword = entry.scopeKind === "keyword" && onKeywordChange !== undefined;
+  const startDisabled = busy || !configured || (needsKeyword && !(keywordValue ?? "").trim());
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -50,11 +55,24 @@ export function SkillPanelView({ entry, task, ready, busy, configured, error, on
             <p className="mt-1 text-xs leading-relaxed text-text-3">{entry.description}</p>
             <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-text-3">{entry.costNote}</p>
           </div>
-          {onStart && (
-            <Button size="sm" onClick={onStart} disabled={busy || !configured}>
-              {busy ? "Starting…" : entry.startLabel}
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {needsKeyword && (
+              <input
+                type="text"
+                value={keywordValue ?? ""}
+                onChange={(event) => onKeywordChange(event.target.value)}
+                placeholder="Keyword…"
+                maxLength={200}
+                aria-label={`Keyword for ${entry.label}`}
+                className="h-8 w-44 min-w-0 border border-line bg-surface-1 px-2.5 font-mono text-xs text-text-1 placeholder:text-text-3 focus:border-line-strong focus:outline-none"
+              />
+            )}
+            {onStart && (
+              <Button size="sm" onClick={onStart} disabled={startDisabled}>
+                {busy ? "Starting…" : entry.startLabel}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

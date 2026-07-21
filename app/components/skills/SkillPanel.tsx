@@ -10,6 +10,8 @@ import { SkillPanelView } from "./SkillPanelView";
 type Props = {
   skillId: SkillId;
   scope: SkillScope;
+  /** Required by the PAID routes (ownership + ledger anchor); free routes ignore it. */
+  auditId?: string;
   /** Resume polling an already-running task (e.g. reopening a saved report). */
   initialTaskId?: string;
   /** Fires once when the task reaches a terminal state (complete or failed). */
@@ -21,7 +23,7 @@ type Props = {
  * The generalized skill panel container — registry lookup, POST-to-start,
  * GET-to-poll. Mirrors TechnicalSeoPanel's ref/cleanup discipline (DATA-CONTRACT §8).
  */
-export function SkillPanel({ skillId, scope, initialTaskId, onComplete, labelAs }: Props) {
+export function SkillPanel({ skillId, scope, auditId, initialTaskId, onComplete, labelAs }: Props) {
   const entry = SKILL_REGISTRY[skillId];
 
   const [task, setTask] = useState<SkillTask | null>(null);
@@ -29,6 +31,7 @@ export function SkillPanel({ skillId, scope, initialTaskId, onComplete, labelAs 
   const [busy, setBusy] = useState(false);
   const [configured, setConfigured] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [keyword, setKeyword] = useState("");
   const firedRef = useRef(false);
 
   const load = useCallback(
@@ -85,9 +88,13 @@ export function SkillPanel({ skillId, scope, initialTaskId, onComplete, labelAs 
     setBusy(true);
     setError(null);
     try {
+      // Keyword-scoped skills take the panel's own input as the scope; the
+      // caller's url-bearing scope prop is only meaningful for site/page kinds.
+      const effectiveScope =
+        entry.scopeKind === "keyword" ? { kind: "keyword" as const, keyword: keyword.trim() } : scope;
       const response = await cloudFetch(`/api/skills/${skillId}`, {
         method: "POST",
-        body: JSON.stringify({ scope }),
+        body: JSON.stringify({ scope: effectiveScope, ...(auditId ? { auditId } : {}) }),
       });
       const body = (await response.json()) as { task?: SkillTask; error?: string };
       if (body.error === "provider_unavailable") setConfigured(false);
@@ -116,6 +123,8 @@ export function SkillPanel({ skillId, scope, initialTaskId, onComplete, labelAs 
           configured={configured}
           error={error}
           onStart={() => void start()}
+          keywordValue={entry.scopeKind === "keyword" ? keyword : undefined}
+          onKeywordChange={entry.scopeKind === "keyword" ? setKeyword : undefined}
         />
       </div>
     </Card>
