@@ -933,3 +933,18 @@ handoff/reopen mode the agent report embeds.
 harmless, same pattern as every prior smoke. Optional envs
 AGENT_MAX_SKILLS/AGENT_MAX_RUN_USD/AGENT_WALL_CLOCK_MS unset (safe
 defaults). claude-seo reference clone now v2.2.4.
+
+---
+
+## 2026-07-21 (pm) — coordinator: wave close — agent auth fix + final live validation
+
+The final browser smoke caught a REAL bug the mock-first e2e couldn't:
+`consumeAgentStream` used a bare fetch (modeled on the anonymous bulk
+consumer) — no owner header, so every real agent run 401'd. Fixed with
+cloudFetch (`cee9b96`), e2e route mock hardened to reject header-less
+requests (regression now fails in CI), redeployed. Live re-smoke: agent
+confirm gate renders in production — 200 stream, "Agent plan" card,
+"Estimated total $0.16" (labs+backlinks+crawl per the plan table, since
+the smoke owner has a prior audit). The full paid run was NOT clicked
+(individual skills + ledger already proven live; save the $0.16).
+Smoke owner token deleted. Wave SK0–SK4: CLOSED.
