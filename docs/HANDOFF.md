@@ -948,3 +948,41 @@ confirm gate renders in production — 200 stream, "Agent plan" card,
 the smoke owner has a prior audit). The full paid run was NOT clicked
 (individual skills + ledger already proven live; save the $0.16).
 Smoke owner token deleted. Wave SK0–SK4: CLOSED.
+
+---
+
+## 2026-07-21 (pm) — coordinator: SK5 polish — paid-panel seam + keyword input, live-verified
+
+**Done**
+- Coordinator review of the untested SkillPanel↔paid-route seam found a
+  REAL production bug: SkillPanel POSTed { scope } only; paid routes
+  require { auditId, scope } — the hub's backlinks/labs Run buttons 400'd.
+  Fixed (`39324f4`), then the live smoke caught a second layer: the
+  threaded auditId came from report-bearing records only, so report-less
+  domains still 400'd — fallback to any latest audit record (`12067ff`).
+- Keyword-input slot: SkillPanelView idle renders a controlled input for
+  keyword-scoped skills (Run gated on non-empty); SkillPanel owns the
+  state and swaps the scope. serp + keywords flags flipped after live
+  smokes (keywords $0.09 actual, real volume/cpc data) and both mounted
+  on the hub (HUB_SKILL_IDS now 9).
+- Compare route live-smoked (topN=1): real SERP → real competitor audited
+  through the 18-signal engine with genuine findings → side-by-side,
+  $0.004, streamed progress/done frames. Its registry flag stays OFF —
+  compare speaks its own SSE shape, needs a dedicated panel (follow-up).
+- Final strict browser smoke on production: paid panel click → 200 →
+  "Total backlinks" StatGrid + "Cost: $0.0240" rendered, on a
+  deliberately report-less workspace (the fallback path).
+- e2e: seam-regression test (route mock rejects auditId-less paid POSTs)
+  + keyword-gating assertions. Gates: 693 unit / 58 e2e / lint /
+  typecheck / build.
+
+**Next**
+1. USER: push main (`env -u GH_TOKEN git push origin main`).
+2. Compare panel (SSE-driven, mirrors TechnicalSeoPanel's explicit-start
+   + the compare:progress/done frames) → flip its flag. Small follow-up.
+3. G4 (GSC/GA4) — blocked on the user's Google Cloud OAuth setup (F3-OPS).
+
+**Context**: two lessons reinforced — (a) multi-agent seams need one
+end-to-end click test per surface, mocks hid both bugs; (b) loose
+getByText matched idle description copy and false-positived the first
+smoke — strict assertions (stat tiles, API status) only.
