@@ -28,12 +28,7 @@ function validateUrl(value: string): string | null {
 const MODES: { value: AuditMode; label: string; help: string }[] = [
   { value: "single", label: "Single page", help: "Audit one URL." },
   { value: "site", label: "Whole site", help: "Discover and audit up to 500 pages." },
-  // Agent mode is still under active development (SK2-SK4) — hidden in
-  // production so we don't ship a dead route; SK3 removes this gate once
-  // the real orchestrator backend lands.
-  ...(process.env.NODE_ENV !== "production"
-    ? [{ value: "agent" as const, label: "Agent", help: "Plans every relevant check — you confirm the cost first." }]
-    : []),
+  { value: "agent", label: "Agent", help: "Plans every relevant check — you confirm the cost first." },
 ];
 
 export function AuditUrlForm() {

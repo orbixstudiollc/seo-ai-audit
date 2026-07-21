@@ -1,16 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DET_SIGNAL_IDS, type DetSignalId, type DetSignalResult } from "@aeo/scoring";
 import type { SavedAuditReport } from "@/lib/reports";
+import { agentStreamReducer, type AgentStreamState } from "@/app/hooks/useAgentStream";
+import type { SkillTask } from "@/lib/skills/types";
+import { AgentReportView } from "./AgentReportView";
 import { AuditReportView } from "./AuditReportView";
 import { SiteAuditReportView } from "./SiteAuditReportView";
 
-/** Read-only render of a publicly shared stored report — no retry, no persistence. */
+const NOOP = () => undefined;
+
+/** Read-only render of a publicly shared stored report — no retry, no persistence
+ * (a resolved handoff task still updates the on-screen state, just never saves). */
 export function SharedReportView({ report }: { report: SavedAuditReport }) {
   const router = useRouter();
-  const sourceUrl = report.kind === "single" ? report.report.page.url : report.state.rootUrl;
+  const [agentState, setAgentState] = useState<AgentStreamState | null>(report.kind === "agent" ? report.state : null);
+  const handlePendingResolved = useCallback((taskId: string, task: SkillTask) => {
+    setAgentState((prev) => (prev ? agentStreamReducer(prev, { type: "pending-resolved", taskId, task }) : prev));
+  }, []);
+
+  const sourceUrl = report.kind === "single" ? report.report.page.url : report.kind === "agent" ? report.url : report.state.rootUrl;
   const header = (
     <div className="mx-auto w-full max-w-4xl px-4 pt-6">
       <p className="font-mono text-[10px] uppercase tracking-wider text-text-3">
@@ -38,6 +50,16 @@ export function SharedReportView({ report }: { report: SavedAuditReport }) {
           onRetry={() => router.push(`/audit?url=${encodeURIComponent(sourceUrl ?? "")}`)}
           retryLabel="Run a fresh audit"
         />
+      </main>
+    );
+  }
+
+  if (report.kind === "agent") {
+    const state = agentState ?? report.state;
+    return (
+      <main className="flex flex-1 flex-col">
+        {header}
+        <AgentReportView url={report.url} {...state} confirm={NOOP} retry={NOOP} resolvePending={handlePendingResolved} />
       </main>
     );
   }

@@ -103,6 +103,20 @@ test("site hub shows growth trend, action plan, technical panel, and history for
   // Audit history lists both records with working "Open report" links.
   await expect(page.getByRole("heading", { name: "Audit history" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open report" })).toHaveCount(2);
+
+  // The per-domain SkillPanel checks (SK3) mount unconditionally but every
+  // HUB_SKILL_IDS entry is still `enabled: false` — they render nothing
+  // until a later wave flips those flags, so no heading for any of them
+  // should appear yet.
+  for (const label of ["Schema", "Sitemap", "Hreflang", "Images", "AI access", "Backlinks", "Labs"]) {
+    await expect(page.getByRole("heading", { name: label, level: 2 })).toHaveCount(0);
+  }
+});
+
+test("site hub's Run agent audit button navigates to the agent audit page for the domain's latest URL", async ({ page }) => {
+  await seedFullDomainAndOpenHub(page);
+  await page.getByRole("button", { name: "Run agent audit" }).click();
+  await expect(page).toHaveURL(`/audit/agent?url=${encodeURIComponent(ROOT)}`);
 });
 
 test("site hub shows an empty state for a domain with no audits", async ({ page }) => {

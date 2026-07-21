@@ -1,5 +1,6 @@
 import type { AuditErrorKind, AuditReport, SiteAuditStreamPhase } from "@/lib/audit/types";
 import type { SiteAuditStreamState } from "@/app/hooks/useSiteAuditStream";
+import type { AgentStreamState } from "@/app/hooks/useAgentStream";
 
 const DB_NAME = "seo-ai-audit:reports";
 const STORE_NAME = "reports";
@@ -25,7 +26,21 @@ export interface SavedSiteReport {
   state: Omit<SiteAuditStreamState, "phase">;
 }
 
-export type SavedAuditReport = SavedSingleReport | SavedSiteReport;
+export interface SavedAgentReport {
+  version: typeof SAVED_REPORT_VERSION;
+  id: string;
+  kind: "agent";
+  createdAt: string;
+  phase: "done" | "error";
+  /** AgentStreamState carries no URL (§9) — unlike the single/site cases,
+   * which reach it via report.report.page.url / state.rootUrl, this needs
+   * its own copy so a public share link (a different browser, no local or
+   * cloud history to cross-reference) can still render and re-run. */
+  url: string;
+  state: AgentStreamState;
+}
+
+export type SavedAuditReport = SavedSingleReport | SavedSiteReport | SavedAgentReport;
 
 function openReportsDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -55,6 +70,7 @@ export function isSavedReport(value: unknown): value is SavedAuditReport {
   if (item.version !== SAVED_REPORT_VERSION || typeof item.id !== "string" || typeof item.createdAt !== "string") return false;
   if (item.kind === "single") return (item.phase === "done" || item.phase === "error") && !!item.report && typeof item.report === "object";
   if (item.kind === "site") return (item.phase === "done" || item.phase === "error") && !!item.state && typeof item.state === "object";
+  if (item.kind === "agent") return (item.phase === "done" || item.phase === "error") && typeof item.url === "string" && !!item.state && typeof item.state === "object";
   return false;
 }
 
