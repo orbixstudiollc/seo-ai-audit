@@ -9,31 +9,42 @@ const DEFAULT_BASE_URL = "https://api.dataforseo.com";
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RESPONSE_BYTES = 8_000_000;
 
-type JsonRecord = Record<string, unknown>;
+// ponytail: fixed en/US locale for every paid lookup (serp/keywords/labs) —
+// no per-audit locale setting exists yet. Upgrade path: thread a locale
+// through SkillScope once a non-US audience needs it.
+export const DEFAULT_LANGUAGE_CODE = "en";
+export const DEFAULT_LOCATION_CODE = 2840;
 
-function record(value: unknown): JsonRecord | null {
+export type JsonRecord = Record<string, unknown>;
+
+// Shared shape-defensive parsing + envelope helpers, reused by the paid
+// SK2 modules (serp/keywords/labs/backlinks) so they extend this client
+// instead of forking their own copies (record/text/finiteNumber, DFS
+// tasks[]/result[] envelope unwrapping).
+
+export function record(value: unknown): JsonRecord | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as JsonRecord
     : null;
 }
 
-function array(value: unknown): unknown[] {
+export function array(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function finiteNumber(value: unknown, fallback = 0): number {
+export function finiteNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function nullableNumber(value: unknown): number | null {
+export function nullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function text(value: unknown, fallback = ""): string {
+export function text(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
-function firstTask(payload: JsonRecord): JsonRecord {
+export function firstTask(payload: JsonRecord): JsonRecord {
   const task = record(array(payload.tasks)[0]);
   const topStatus = finiteNumber(payload.status_code);
   const taskStatus = finiteNumber(task?.status_code);
@@ -43,7 +54,7 @@ function firstTask(payload: JsonRecord): JsonRecord {
   return task;
 }
 
-function firstResult(task: JsonRecord): JsonRecord {
+export function firstResult(task: JsonRecord): JsonRecord {
   return record(array(task.result)[0]) ?? {};
 }
 
@@ -57,7 +68,7 @@ export function dataForSeoConfigured(): boolean {
   return configuredCredentials() !== null;
 }
 
-async function request(path: string, init: RequestInit): Promise<JsonRecord> {
+export async function request(path: string, init: RequestInit): Promise<JsonRecord> {
   const credentials = configuredCredentials();
   if (!credentials) throw new Error("DataForSEO is not configured.");
   const baseUrl = (process.env.DATAFORSEO_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
