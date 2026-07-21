@@ -104,12 +104,11 @@ test("site hub shows growth trend, action plan, technical panel, and history for
   await expect(page.getByRole("heading", { name: "Audit history" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open report" })).toHaveCount(2);
 
-  // The per-domain SkillPanel checks (SK3) mount unconditionally but every
-  // HUB_SKILL_IDS entry is still `enabled: false` — they render nothing
-  // until a later wave flips those flags, so no heading for any of them
-  // should appear yet.
+  // The per-domain SkillPanel checks: the seven HUB_SKILL_IDS entries were
+  // flag-flipped after their live deploy smokes (SK-wave discipline), so
+  // each renders its idle panel with an explicit-start button.
   for (const label of ["Schema", "Sitemap", "Hreflang", "Images", "AI access", "Backlinks", "Labs"]) {
-    await expect(page.getByRole("heading", { name: label, level: 2 })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: label, level: 2 })).toBeVisible();
   }
 });
 

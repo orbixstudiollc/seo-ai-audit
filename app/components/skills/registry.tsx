@@ -41,7 +41,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run schema check",
     runningLabel: "Validating structured data…",
     scopeKind: "page",
-    enabled: false,
+    enabled: true,
     Result: SchemaResult,
   },
   sitemap: {
@@ -53,7 +53,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run sitemap check",
     runningLabel: "Validating sitemap…",
     scopeKind: "site",
-    enabled: false,
+    enabled: true,
     Result: SitemapResult,
   },
   hreflang: {
@@ -64,7 +64,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run hreflang check",
     runningLabel: "Checking hreflang tags…",
     scopeKind: "page",
-    enabled: false,
+    enabled: true,
     Result: HreflangResult,
   },
   images: {
@@ -75,7 +75,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run image audit",
     runningLabel: "Auditing images…",
     scopeKind: "page",
-    enabled: false,
+    enabled: true,
     Result: ImagesResult,
   },
   "ai-access": {
@@ -86,7 +86,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run AI access check",
     runningLabel: "Checking AI crawler access…",
     scopeKind: "site",
-    enabled: false,
+    enabled: true,
     Result: AiAccessResult,
   },
   serp: {
@@ -122,7 +122,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run ranked-keywords pull",
     runningLabel: "Pulling ranked keywords…",
     scopeKind: "site",
-    enabled: false,
+    enabled: true,
     Result: LabsResult,
   },
   backlinks: {
@@ -134,7 +134,7 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     startLabel: "Run backlink pull",
     runningLabel: "Pulling backlink profile…",
     scopeKind: "site",
-    enabled: false,
+    enabled: true,
     Result: BacklinksResult,
   },
   compare: {
