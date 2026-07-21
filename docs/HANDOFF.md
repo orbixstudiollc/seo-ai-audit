@@ -986,3 +986,34 @@ Smoke owner token deleted. Wave SK0–SK4: CLOSED.
 end-to-end click test per surface, mocks hid both bugs; (b) loose
 getByText matched idle description copy and false-positived the first
 smoke — strict assertions (stat tiles, API status) only.
+
+---
+
+## 2026-07-21 (pm) — coordinator: SK6 compare panel shipped + live-verified
+
+**Done**
+- ComparePanel (`2e7ddc0`, one Sonnet worktree agent): dedicated SSE
+  consumer for the compare route's compare:progress/compare:done frames —
+  keyword input (Run gated), house panel look, CompareResult + cost line,
+  per-kind error copy, AbortController hygiene. cloudFetch (owner header)
+  and the report-less auditId fallback both baked in from SK5's lessons,
+  each regression-guarded in the e2e (mock 401s header-less requests).
+  compare registry flag flipped. Gates: 698 unit / 59 e2e / lint /
+  typecheck / build. Merged + deployed.
+- Live browser smoke on production: keyword gating verified, compare
+  stream 200 with owner header, and a REAL run completed through the
+  panel — "Cost: $0.0040" rendered (that line only exists in the
+  completed-result state; serp cost captured, page audits ride free-path
+  economics per design). Two smoke probes false-negatived on selector
+  choice (checked the heading pre-hydration; "(you)" is the SERP
+  renderer's marker, CompareResult uses "You"/"Lens" table headers) —
+  noted so future smokes probe the right markers; CI e2e covers the
+  rendering path deterministically.
+
+**State**: every skill in the wave now has a live, verified UI surface.
+Registry: 8 SkillPanel skills + technical-crawl + the dedicated
+ComparePanel all enabled. Nothing left in the SK wave.
+
+**Next**: USER push main; G4 (GSC/GA4) awaits the user's Google Cloud
+OAuth setup (F3-OPS). Smoke residuals: three tiny throwaway-owner
+workspaces in prod (~$0.15 total ledger spend across all smokes today).
