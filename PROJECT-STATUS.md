@@ -5,8 +5,8 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-20 (pm) · by: coordinator session (Fable) — platform
-program kicked off · branch `main`
+Last updated: 2026-07-21 (am) · by: coordinator session (Fable) — audit
+reliability fix + public share links · branch `main`
 
 ## Product
 
@@ -40,9 +40,13 @@ tables through server-only routes.
 Completed reports can be reopened from cloud or IndexedDB; the dashboard
 supports 500 records and paginates 10 cards at a time. Failed bulk pages can be
 retried individually or all at once without rerunning successful pages or site
-discovery. The ownership migration passed a rollback-only production
-database test. Current gates: lint/typecheck/build, 273 tests, and 24
-Playwright journeys.
+discovery — including pages the 240s site budget never started, which now show
+an honest "Not started" status and are covered by the "Retry N remaining
+pages" button. Saved reports can be shared publicly via opt-in revocable
+`/s/<token>` links backed by Supabase (D-021), so a report is viewable by
+anyone, from anywhere, long after the run. The ownership migration passed a
+rollback-only production database test. Current gates: lint/typecheck/build,
+366 tests, and 41 Playwright journeys.
 Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM cost.
 
 ## Plan → status
@@ -78,6 +82,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | W5-ACTION-PLAN | 4-tier severity synthesizer over existing data (§10) | executor + coordinator wrap-up | ✅ done — merged, all gates green (`docs/phases/w5-action-plan-report.md`) |
 | W6–W10 (wave 2) | GSC/GA4 data routes · agent orchestrator · compete/clusters/briefs · insights home · drift | per plan | ⏸ after wave 1 |
 | WS5 bulk upload | spreadsheet → bulk audit (spec `docs/phases/ws5-bulk-upload-spec.md`, needs refresh vs landed bulk API) | Sonnet | ⏸ parked |
+| FIX-RETRY + SHARE | never-started pages retryable + honest status; opt-in public `/s/<token>` share links (§14, D-021) | coordinator | ✅ done — ⚠️ apply migration 202607210006 before/with next deploy |
 
 ## Pending user actions
 
@@ -88,7 +93,9 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 3. **Push main** — the deny rule `Bash(git push origin main:*)` in
    `~/.claude/settings.json` blocks the coordinator; run
    `env -u GH_TOKEN git push origin main` yourself or approve an alternate.
-4. **F3-OPS Google steps** (user-owned): create the Google Cloud OAuth app,
+4. **Apply migration `202607210006_share_links.sql`** in the Supabase SQL
+   editor before (or with) the next deploy — share links 503 until it's in.
+5. **F3-OPS Google steps** (user-owned): create the Google Cloud OAuth app,
    consent screen with `webmasters.readonly` + `analytics.readonly`, submit
    verification; provide `GOOGLE_CLIENT_ID`/`SECRET` + `GOOGLE_TOKEN_ENC_KEY`
    + budget-cap envs to Vercel when W2/F2 land.

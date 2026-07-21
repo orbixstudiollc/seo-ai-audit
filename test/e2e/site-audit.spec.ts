@@ -231,7 +231,7 @@ test("retries every failed page in one click without rerunning successful pages"
   });
 
   await page.goto(`/audit/site?url=${encodeURIComponent(rootUrl)}`);
-  const retryFailed = page.getByRole("button", { name: "Retry 2 failed pages", exact: true });
+  const retryFailed = page.getByRole("button", { name: "Retry 2 remaining pages", exact: true });
   await expect(retryFailed).toBeVisible();
   await retryFailed.click();
 
@@ -301,11 +301,57 @@ test("retries failed pages from a reopened report and persists the merged report
   });
 
   await page.goto(`/report/${encodeURIComponent(id)}`);
-  await page.getByRole("button", { name: "Retry 1 failed page", exact: true }).click();
+  await page.getByRole("button", { name: "Retry 1 remaining page", exact: true }).click();
   await expect(page.getByText("Done")).toHaveCount(2);
   expect(retryBody).toEqual({ url: rootUrl, pages: [failedUrl] });
 
   await page.reload();
   await expect(page.getByText("Done")).toHaveCount(2);
-  await expect(page.getByRole("button", { name: /Retry 1 failed page/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Retry 1 remaining page/ })).toHaveCount(0);
+});
+
+test("retries a page the time budget never started, shown as Not started instead of Queued", async ({ page }) => {
+  const rootUrl = `${server.baseUrl}/`;
+  const goodUrl = `${server.baseUrl}/page-a`;
+  const unstartedUrl = `${server.baseUrl}/page-b`;
+  const initialEvents = [
+    { type: "site:discovery-start", rootUrl },
+    { type: "site:discovery-done", rootUrl, method: "sitemap", pages: [{ url: goodUrl, source: "sitemap" }, { url: unstartedUrl, source: "sitemap" }], truncated: false },
+    { type: "site:page-start", url: goodUrl, index: 0, total: 2 },
+    { type: "site:page-event", url: goodUrl, index: 0, event: { type: "done" } },
+    { type: "site:page-done", url: goodUrl, index: 0, status: "ok" },
+    // Budget expired before page-b ever emitted site:page-start.
+    { type: "site:rollup", rollup: { pagesAudited: 1, pagesFailed: 0, avgScores: null, worstPages: [], commonFindings: [] }, stoppedEarly: { reason: "budget", pagesRemaining: 1 } },
+    { type: "site:done" },
+  ];
+  const retryEvents = [
+    { type: "site:discovery-start", rootUrl },
+    { type: "site:discovery-done", rootUrl, method: "retry", pages: [{ url: unstartedUrl, source: "retry" }], truncated: false },
+    { type: "site:page-start", url: unstartedUrl, index: 0, total: 1 },
+    { type: "site:page-event", url: unstartedUrl, index: 0, event: { type: "done" } },
+    { type: "site:page-done", url: unstartedUrl, index: 0, status: "ok" },
+    { type: "site:rollup", rollup: { pagesAudited: 1, pagesFailed: 0, avgScores: null, worstPages: [], commonFindings: [] }, stoppedEarly: null },
+    { type: "site:done" },
+  ];
+  const requests: Array<{ url: string; pages?: string[] }> = [];
+
+  await page.route("/api/audit/bulk", async (route) => {
+    const body = await route.request().postDataJSON() as { url: string; pages?: string[] };
+    requests.push(body);
+    const events = body.pages ? retryEvents : initialEvents;
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") });
+  });
+
+  await page.goto(`/audit/site?url=${encodeURIComponent(rootUrl)}`);
+  await expect(page.getByRole("button", { name: /page-b Not started/ })).toBeVisible();
+  await expect(page.getByText(/Stopped early \(budget\)/)).toBeVisible();
+  const retryRemaining = page.getByRole("button", { name: "Retry 1 remaining page", exact: true });
+  await expect(retryRemaining).toBeVisible();
+  await retryRemaining.click();
+
+  await expect(page.getByText("Done")).toHaveCount(2);
+  await expect(retryRemaining).toHaveCount(0);
+  expect(requests).toHaveLength(2);
+  expect(requests[1]?.pages).toEqual([unstartedUrl]);
+  expect(requests[1]?.pages).not.toContain(goodUrl);
 });

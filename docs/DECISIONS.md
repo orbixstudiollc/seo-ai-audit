@@ -100,3 +100,11 @@ propose; the coordinator records.
   and documented in docs/phases/g2-tracked-snapshots-report.md: the
   audit_required gate is UX-not-security (PUT /api/history bypass), and the
   account-claim merge may exceed the per-owner limit.
+- **D-021** 2026-07-21 — **Share links are opt-in per report, not
+  public-by-default.** "Store everything in Supabase so anyone can view from
+  anywhere" is satisfied by (a) default-on cloud persistence of every run
+  state — already live since Phase 1/D-011 — plus (b) `share_links`: a
+  server-minted 128-bit hex token per report the owner explicitly shares,
+  rendered read-only at public `/s/<token>` (noindex). Making all reports
+  public-by-default would leak what users audit. Revocation = DELETE row;
+  the link dies instantly.
