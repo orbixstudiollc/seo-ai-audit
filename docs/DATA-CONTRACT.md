@@ -456,3 +456,34 @@ audit; D-005 governs user-facing audits and is untouched).
 Canonical mock: `lib/growth/mockSeries.ts` (g2-ui owns) — a 30-day series
 containing at least one `changed` day, one `err` day, and a pre-first-audit
 stretch with `lens: null`.
+
+## 14. Public share links (v1.4, additive — 2026-07-21)
+
+Opt-in, revocable public links to STORED reports (D-021). Nothing becomes
+public until the owner clicks share; D-006's stateless re-run link is
+unchanged and remains the share affordance on live runs.
+
+Table `share_links` (migration `202607210006`, RLS zero-grant, claim-RPC
+updated in the same migration): `token text pk` (32 lowercase hex chars =
+128-bit, minted server-side), `owner_hash`, `audit_id`,
+`unique (owner_hash, audit_id)` — one stable token per report; re-sharing
+returns the same token.
+
+```
+POST /api/share            owner-authed, per-IP rate limit 10/min
+  { auditId }           -> 200 { token }        (mint or reuse)
+                           400 invalid_audit_id · 404 report_not_found
+                           429 rate_limit · 503 cloud_*_failed
+DELETE /api/share          owner-authed, idempotent
+  { auditId }           -> 200 { ok: true }
+GET /s/<token>             PUBLIC page, no owner header — the token is the
+                           whole capability. Invalid/revoked/unknown ->
+                           "Link unavailable" (200, noindex). Renders the
+                           stored SavedAuditReport read-only (no retry, no
+                           persistence, no technical-crawl panel).
+```
+
+Invariants: tokens only resolve through `share_links` (no enumeration of
+`audit_reports`); the public page is `noindex`; account claim moves links to
+the verified workspace so shared URLs survive sign-in (account's existing
+token wins on conflict, device duplicate is dropped).

@@ -715,3 +715,42 @@ dashboard serves Growth overview, tracked-sites + cron both 401 unauthenticated
 (deny-closed auth proven), and post-migration probe returned {"sites":[]} 200,
 confirming 202607200005 is applied. CRON_SECRET rotated + baked into the live
 deployment; first scheduled snapshot run: 03:00 UTC tonight.
+
+---
+
+## 2026-07-21 (am) — coordinator: audit-reliability fix + public share links
+
+**Done**
+- **Retry/queued fix** (branch `wsp-audit-reliability`): pages the 240s site
+  wall-clock budget never started had no state entry, so both retry selectors
+  (`phase === "error"`) skipped them forever and the UI showed a permanent
+  "Queued". Selectors now include any non-done page
+  (`useSiteAuditStream.ts`, `SavedReportClient.tsx`); the settled view labels
+  no-entry pages "Not started"; the button reads "Retry N remaining pages"
+  and the stopped-early banner points at it. Zero backend change — the
+  `pages` retry mode already accepted arbitrary lists. New reducer unit test
+  (never-started page → retried → done) + budget-expiry e2e journey.
+- **Public share links** (same branch, DATA-CONTRACT §14, D-021): opt-in,
+  revocable `/s/<token>` links to STORED reports. Migration
+  `202607210006_share_links.sql` (`share_links` table, RLS zero-grant,
+  claim-RPC recreated with link migration), `POST/DELETE /api/share`
+  (owner-authed, rate-limited, mint-or-reuse 128-bit hex token), public
+  server page `app/s/[token]` rendering the stored report read-only via
+  `SharedReportView`, `ShareLinkButton` on saved reports. Persistence audit
+  confirmed `autoSaveAudits` defaults true and every run state (complete /
+  partial / stopped-early / failed) already reaches Supabase.
+- Gates: lint ✅ typecheck ✅ 366 unit ✅ 41 e2e ✅ build ✅.
+
+**Next**
+1. USER: apply `202607210006_share_links.sql` in Supabase SQL editor.
+2. USER: push main (`env -u GH_TOKEN git push origin main`).
+3. Deploy + D-007 smoke: open a saved report → Copy public link → open
+   `/s/<token>` in a private window (no owner header) → report renders;
+   DELETE the link → page shows "Link unavailable".
+4. G3 (site hub + skill panels + agent runs) remains next in the growth plan.
+
+**Context**: share links deliberately opt-in (D-021 — public-by-default would
+leak what users audit). D-006 stateless re-run share link unchanged on live
+runs. The e2e covers the button flow; the public page render is unit-tested
+(`loadSharedReport`) and needs the live smoke because Playwright can't mock
+server-side Supabase.

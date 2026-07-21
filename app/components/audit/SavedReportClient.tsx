@@ -11,6 +11,7 @@ import { addHistoryRecord, loadHistory, notifyHistoryChanged, storeHistory, type
 import { consumeSiteAuditStream, siteAuditStreamReducer, type SiteAuditStreamState } from "@/app/hooks/useSiteAuditStream";
 import type { TechnicalSeoPage } from "@/lib/dataforseo/types";
 import { AuditReportView } from "./AuditReportView";
+import { ShareLinkButton } from "./ShareLinkButton";
 import { SiteAuditReportView } from "./SiteAuditReportView";
 import { TechnicalSeoPanel } from "./TechnicalSeoPanel";
 
@@ -118,7 +119,10 @@ function SavedSiteReportClient({ report }: { report: SavedSiteReport }) {
     <main className="flex flex-1 flex-col">
       <div className="mx-auto w-full max-w-4xl px-4 pt-6">
         <Link href="/dashboard" className="font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">← Back to dashboard</Link>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p>
+          <ShareLinkButton auditId={report.id} />
+        </div>
       </div>
       <SiteAuditReportView
         phase={siteState.phase}
@@ -161,7 +165,7 @@ export function SavedReportClient({ id }: { id: string }) {
 
   if (report.kind === "single") {
     const signals = Object.fromEntries(DET_SIGNAL_IDS.map((signalId) => [signalId, report.report.scores.signals[signalId]])) as Record<DetSignalId, DetSignalResult>;
-    return <main className="flex flex-1 flex-col"><div className="mx-auto w-full max-w-4xl px-4 pt-6"><Link href="/dashboard" className="font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">← Back to dashboard</Link><p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p></div><AuditReportView phase={report.phase} page={report.report.page} signals={signals} scores={report.report.scores} findings={report.report.findings} rewrites={report.report.rewrites} error={report.error} onRetry={() => router.push(`/audit?url=${encodeURIComponent(report.report.page.url)}`)} /></main>;
+    return <main className="flex flex-1 flex-col"><div className="mx-auto w-full max-w-4xl px-4 pt-6"><Link href="/dashboard" className="font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">← Back to dashboard</Link><div className="mt-2 flex flex-wrap items-center justify-between gap-3"><p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p><ShareLinkButton auditId={report.id} /></div></div><AuditReportView phase={report.phase} page={report.report.page} signals={signals} scores={report.report.scores} findings={report.report.findings} rewrites={report.report.rewrites} error={report.error} onRetry={() => router.push(`/audit?url=${encodeURIComponent(report.report.page.url)}`)} /></main>;
   }
 
   return <SavedSiteReportClient report={report} />;
