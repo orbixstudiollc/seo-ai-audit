@@ -1,5 +1,7 @@
 import { parseAuditFrame, parseSiteAuditFrame } from "@/lib/audit/stream";
+import { parseAgentFrame } from "@/lib/skills/agentStream";
 import type { AuditStreamEvent, SiteAuditStreamEvent } from "@/lib/audit/types";
+import type { AgentStreamEvent } from "@/lib/skills/types";
 
 /**
  * Drain an SSE Response body to completion and return the parsed audit events,
@@ -65,5 +67,35 @@ export async function collectSiteSse(response: Response): Promise<SiteAuditStrea
 }
 
 export function siteEventTypes(events: SiteAuditStreamEvent[]): string[] {
+  return events.map((e) => e.type);
+}
+
+/** Agent-mode sibling of collectSse, for POST /api/audit/agent (AgentStreamEvent, DATA-CONTRACT §9). */
+export async function collectAgentSse(response: Response): Promise<AgentStreamEvent[]> {
+  if (!response.body) throw new Error("Response has no body to stream.");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const events: AgentStreamEvent[] = [];
+  let buffer = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const frame = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const event = parseAgentFrame(frame);
+      if (event) events.push(event);
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+
+  return events;
+}
+
+export function agentEventTypes(events: AgentStreamEvent[]): string[] {
   return events.map((e) => e.type);
 }

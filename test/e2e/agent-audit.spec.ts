@@ -162,6 +162,64 @@ test("a run rejected before fan-out shows a blocking budget_exceeded banner and 
   expect(requests[1]?.planOnly).toBeUndefined();
 });
 
+/** SK3: reopening a saved agent report (kind "agent") with an unresolved
+ * handoff task — the row re-enters polling via the SkillPanel's
+ * initialTaskId (SK2) and, once it resolves, the report's status upgrades. */
+test("reopening a saved agent report with an unresolved handoff resolves it via the technical-crawl poll", async ({ page }) => {
+  const REPORT_ID = "agent:https://example.test/:2026-07-21T00:00:00.000Z";
+  await page.route("/api/skills/technical-crawl**", routeTechnicalCrawlPoll());
+  await page.goto("/");
+  await page.evaluate(async ({ id, url }) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("seo-ai-audit:reports", 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("reports", { keyPath: "id" });
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction("reports", "readwrite");
+      transaction.objectStore("reports").put({
+        version: 1, id, kind: "agent", createdAt: "2026-07-21T00:00:00.000Z", phase: "done", url,
+        state: {
+          phase: "done", runId: "run-1", businessType: "saas",
+          skills: [
+            {
+              skillId: "schema", mode: "inline", estCostUsd: 0, status: "complete", taskId: null,
+              task: {
+                id: "task-schema-1", skillId: "schema", scope: { kind: "page", url }, status: "complete",
+                createdAt: "2026-07-21T00:00:00.000Z", updatedAt: "2026-07-21T00:00:01.000Z", costUsd: 0, resultVersion: 1,
+                result: { detected: [], missingRecommended: [], generated: [] },
+              },
+            },
+            {
+              skillId: "technical-crawl", mode: "handoff", estCostUsd: 0.05, status: "handoff",
+              task: null, taskId: "mock-task-tech-1",
+            },
+          ],
+          actionPlan: { generatedAt: "2026-07-21T00:00:02.000Z", items: [] },
+          pendingTaskIds: ["mock-task-tech-1"],
+          error: null,
+          planOnly: false,
+        },
+      });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  }, { id: REPORT_ID, url: AUDIT_URL });
+
+  await page.goto(`/report/${encodeURIComponent(REPORT_ID)}`);
+  await expect(page.getByRole("heading", { name: "Agent plan", level: 2 })).toBeVisible();
+
+  // Still pending on load — polls and resolves via the mocked GET.
+  await expect(page.getByText("Continues in background")).toBeVisible();
+  await expect(page.getByText("Continues in background")).toHaveCount(0, { timeout: 20_000 });
+  const technicalRow = page.getByRole("listitem").filter({ hasText: "Technical crawl" });
+  await expect(technicalRow.getByText("Done")).toBeVisible();
+  await technicalRow.getByText("View result").click();
+  await expect(page.getByText("Pages crawled", { exact: true })).toBeVisible();
+});
+
 test("axe: no critical/serious violations; no horizontal overflow at 320px (running + done)", async ({ page }) => {
   await page.route("/api/skills/technical-crawl**", routeTechnicalCrawlPoll());
   await page.route("/api/audit/agent", (route) => routeAgentStream(route, planOnlyEvents, fullRunEvents));

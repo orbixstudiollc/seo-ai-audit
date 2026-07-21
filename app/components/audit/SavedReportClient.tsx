@@ -4,13 +4,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DET_SIGNAL_IDS, type DetSignalId, type DetSignalResult } from "@aeo/scoring";
-import { loadAuditReport, type SavedAuditReport, type SavedSiteReport } from "@/lib/reports";
+import { loadAuditReport, type SavedAgentReport, type SavedAuditReport, type SavedSiteReport } from "@/lib/reports";
 import { saveAuditReport } from "@/lib/reports";
 import { loadCloudAuditReport, saveCloudAudit } from "@/lib/cloud/history";
 import { addHistoryRecord, loadHistory, notifyHistoryChanged, storeHistory, type AuditHistoryRecord } from "@/lib/history";
 import { consumeSiteAuditStream, siteAuditStreamReducer, type SiteAuditStreamState } from "@/app/hooks/useSiteAuditStream";
+import { agentStreamReducer, type AgentStreamState } from "@/app/hooks/useAgentStream";
 import type { TechnicalSeoPage } from "@/lib/dataforseo/types";
+import type { SkillTask } from "@/lib/skills/types";
 import { AuditReportView } from "./AuditReportView";
+import { AgentReportView } from "./AgentReportView";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { SiteAuditReportView } from "./SiteAuditReportView";
 import { TechnicalSeoPanel } from "./TechnicalSeoPanel";
@@ -52,6 +55,65 @@ function siteHistoryRecord(report: SavedSiteReport, state: SiteAuditStreamState)
     },
     reportAvailable: true,
   };
+}
+
+function agentHistoryRecord(report: SavedAgentReport, url: string, state: AgentStreamState): AuditHistoryRecord {
+  return {
+    id: report.id, version: 4, url,
+    title: (() => { try { return new URL(url).hostname; } catch { return url; } })(),
+    mode: "agent",
+    createdAt: report.createdAt,
+    status: state.phase === "error" ? "failed" : state.pendingTaskIds.length > 0 ? "partial" : "complete",
+    scores: null,
+    details: {
+      kind: "agent",
+      skillsRun: state.skills.filter((row) => row.status !== "planned").length,
+      skillsFailed: state.skills.filter((row) => row.status === "failed").length,
+      pendingCount: state.pendingTaskIds.length,
+      errorMessage: state.error ? compactText(state.error.message) : undefined,
+    },
+    reportAvailable: true,
+  };
+}
+
+function SavedAgentReportClient({ report }: { report: SavedAgentReport }) {
+  const [state, setState] = useState<AgentStreamState>(report.state);
+
+  const persist = useCallback(async (next: AgentStreamState) => {
+    const updatedReport: SavedAgentReport = { ...report, phase: next.phase === "error" ? "error" : "done", state: next };
+    await saveAuditReport(updatedReport).catch(() => undefined);
+    const record = agentHistoryRecord(updatedReport, report.url, next);
+    const current = loadHistory(window.localStorage);
+    const historyRecords = current.some((item) => item.id === record.id)
+      ? current.map((item) => item.id === record.id ? record : item)
+      : addHistoryRecord(current, record, 500);
+    storeHistory(window.localStorage, historyRecords);
+    notifyHistoryChanged();
+    await saveCloudAudit(record, updatedReport);
+  }, [report]);
+
+  const handlePendingResolved = useCallback((taskId: string, task: SkillTask) => {
+    setState((prev) => {
+      const next = agentStreamReducer(prev, { type: "pending-resolved", taskId, task });
+      void persist(next);
+      return next;
+    });
+  }, [persist]);
+
+  const noop = useCallback(() => undefined, []);
+
+  return (
+    <main className="flex flex-1 flex-col">
+      <div className="mx-auto w-full max-w-4xl px-4 pt-6">
+        <Link href="/dashboard" className="font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">← Back to dashboard</Link>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p>
+          <ShareLinkButton auditId={report.id} />
+        </div>
+      </div>
+      <AgentReportView url={report.url} {...state} confirm={noop} retry={noop} resolvePending={handlePendingResolved} />
+    </main>
+  );
 }
 
 function SavedSiteReportClient({ report }: { report: SavedSiteReport }) {
@@ -167,6 +229,8 @@ export function SavedReportClient({ id }: { id: string }) {
     const signals = Object.fromEntries(DET_SIGNAL_IDS.map((signalId) => [signalId, report.report.scores.signals[signalId]])) as Record<DetSignalId, DetSignalResult>;
     return <main className="flex flex-1 flex-col"><div className="mx-auto w-full max-w-4xl px-4 pt-6"><Link href="/dashboard" className="font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">← Back to dashboard</Link><div className="mt-2 flex flex-wrap items-center justify-between gap-3"><p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Saved report · {new Date(report.createdAt).toLocaleString()}</p><ShareLinkButton auditId={report.id} /></div></div><AuditReportView phase={report.phase} page={report.report.page} signals={signals} scores={report.report.scores} findings={report.report.findings} rewrites={report.report.rewrites} error={report.error} onRetry={() => router.push(`/audit?url=${encodeURIComponent(report.report.page.url)}`)} /></main>;
   }
+
+  if (report.kind === "agent") return <SavedAgentReportClient report={report} />;
 
   return <SavedSiteReportClient report={report} />;
 }
