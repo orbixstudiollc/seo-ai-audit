@@ -754,3 +754,26 @@ leak what users audit). D-006 stateless re-run share link unchanged on live
 runs. The e2e covers the button flow; the public page render is unit-tested
 (`loadSharedReport`) and needs the live smoke because Playwright can't mock
 server-side Supabase.
+
+---
+
+## 2026-07-21 (am) — coordinator: deploy + live validation (fix-pack + share)
+
+Deployed `main@17cba6a` to production via Vercel CLI (deployment
+`seo-ai-audit-fxd8vtqfb-orbix2.vercel.app`, promoted to the
+seo-ai-audit-orbix2.vercel.app alias). D-007 smoke, all green over real HTTP:
+
+- `/s/<invalid>` and `/s/<unknown-32hex>` → "Link unavailable" (200, noindex).
+- Throwaway workspace: `PUT /api/history` → `{"saved":1,"reportSaved":true}`
+  (report persisted in Supabase), `POST /api/share` → token minted — proves
+  migration `202607210006` is applied in production.
+- Public `GET /s/<token>` with NO owner header rendered the stored report
+  ("Shared report … read-only", `robots: noindex,nofollow`).
+- Re-POST returned the SAME token (idempotent); `DELETE` → `{"ok":true}`;
+  the revoked link now renders "Link unavailable".
+- `/audit/site` serves 200 on the new bundle (retry fix is client-side,
+  covered by the 41-journey e2e suite pre-deploy).
+
+残: smoke left one tiny orphaned audit row under a throwaway owner (same as
+prior probes — harmless). Main still needs the user push
+(`env -u GH_TOKEN git push origin main`). Next phase: G3.

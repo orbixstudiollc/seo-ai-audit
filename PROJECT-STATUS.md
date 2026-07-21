@@ -82,7 +82,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | W5-ACTION-PLAN | 4-tier severity synthesizer over existing data (§10) | executor + coordinator wrap-up | ✅ done — merged, all gates green (`docs/phases/w5-action-plan-report.md`) |
 | W6–W10 (wave 2) | GSC/GA4 data routes · agent orchestrator · compete/clusters/briefs · insights home · drift | per plan | ⏸ after wave 1 |
 | WS5 bulk upload | spreadsheet → bulk audit (spec `docs/phases/ws5-bulk-upload-spec.md`, needs refresh vs landed bulk API) | Sonnet | ⏸ parked |
-| FIX-RETRY + SHARE | never-started pages retryable + honest status; opt-in public `/s/<token>` share links (§14, D-021) | coordinator | ✅ done — ⚠️ apply migration 202607210006 before/with next deploy |
+| FIX-RETRY + SHARE | never-started pages retryable + honest status; opt-in public `/s/<token>` share links (§14, D-021) | coordinator | ✅ deployed + live-validated 2026-07-21 (migration 202607210006 applied; full mint→public-view→revoke round-trip green) |
 
 ## Pending user actions
 
@@ -93,8 +93,8 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 3. **Push main** — the deny rule `Bash(git push origin main:*)` in
    `~/.claude/settings.json` blocks the coordinator; run
    `env -u GH_TOKEN git push origin main` yourself or approve an alternate.
-4. **Apply migration `202607210006_share_links.sql`** in the Supabase SQL
-   editor before (or with) the next deploy — share links 503 until it's in.
+4. ~~Apply migration `202607210006_share_links.sql`~~ — verified applied in
+   production on 2026-07-21 (share-link round-trip smoke passed).
 5. **F3-OPS Google steps** (user-owned): create the Google Cloud OAuth app,
    consent screen with `webmasters.readonly` + `analytics.readonly`, submit
    verification; provide `GOOGLE_CLIENT_ID`/`SECRET` + `GOOGLE_TOKEN_ENC_KEY`
