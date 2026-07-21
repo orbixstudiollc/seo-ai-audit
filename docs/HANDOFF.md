@@ -820,3 +820,40 @@ for blockers/question-gaps/common-findings across the whole app (not just
 the new hub) — this is a bug fix, not a breaking contract change (§10 never
 promised a specific id format, only that ids exist), but worth knowing if a
 future session sees action-plan ids that look different from before.
+
+---
+
+## 2026-07-21 (pm) — coordinator: G3 deploy + live validation
+
+Deployed `main@4541794` to production (`seo-ai-audit-nnjieptmo-orbix2.vercel.app`,
+promoted to the `seo-ai-audit-orbix2.vercel.app` alias). D-007 smoke, real
+browser against the live URL (curl alone can't drive `SiteHubClient` — it's
+client-rendered and reads the owner token from `localStorage`):
+
+- Seeded a throwaway owner's history + saved reports for a synthetic
+  `g3-smoke.example` domain (2 site audits, matching the exact regression
+  fixture from `test/e2e/site-hub.spec.ts`) via `PUT /api/history`.
+- Real Chromium session (owner token set in `localStorage`, DNS pinned to
+  Vercel's IP the same way the sandbox's curl needs `--resolve`) navigated to
+  `/site/g3-smoke.example` and confirmed: domain heading, "2 audits", the
+  `+20` delta chip, all 4 lens scores, the "Issues found per audit" burndown
+  card, and — the important one — **"Since the previous audit: 2 resolved ·
+  1 new"**, exactly the correct output the `stableId()` fix was supposed to
+  produce (proving the HIGH-severity id-stability bug is genuinely fixed in
+  production, not just in tests). Action plan correctly showed only the
+  LATEST report's finding ("Thin content"). Technical crawl panel mounted
+  and was actively checking status. Audit history listed both records with
+  working "Open report" links.
+- Spot-checked the other two recent features are still healthy: share-link
+  mint → public view (no owner header) → revoke round-tripped clean;
+  `/audit/site` (retry-fix surface) serves 200.
+- All smoke artifacts (temp scripts, owner token file, JSON payloads)
+  cleaned up after.
+
+残: the smoke leaves one throwaway domain's history/reports/share-link under
+a discarded owner token in production Supabase (same harmless-residual
+pattern as every prior smoke this project). No further action needed.
+
+**Next**: G4 (GSC/GA4 daily ingestion) — blocked on W2-GOOGLE (OAuth vault),
+still queued; needs the user's Google Cloud OAuth app + consent screen work
+(F3-OPS) before it can start.

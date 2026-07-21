@@ -5,8 +5,8 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-21 (am) · by: coordinator session (Fable) — G3 site hub
-· branch `main`
+Last updated: 2026-07-21 (pm) · by: coordinator session (Fable) — G3 site hub
+deployed + live-validated · branch `main`
 
 ## Product
 
@@ -76,7 +76,7 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 |---|---|---|---|
 | F1-CONTRACT | DATA-CONTRACT v1.2 (§8 SkillTask, §9 agent runs, §10 action plan, §11 Google/GSC/GA4, §12 insights) + decisions D-014–D-018 | Fable | ✅ done (this commit) |
 | F2-BUDGET | spend-gate RPCs, taskStore/budget extraction, fingerprint idempotency, race fix, technical-audit rate limit | coordinator | ✅ done — ⚠️ apply migration 202607200004 BEFORE next deploy (`docs/phases/f2-budget-report.md`) |
-| **Growth program G1–G5** | daily-progress dashboard per approved plan (`~/.claude/plans/shimmying-launching-elephant.md`): ✅ G1 growth tab (merged, 30/30 e2e, `docs/phases/g1-growth-overview-report.md`) · ✅ G2 tracked sites + daily snapshots (merged `0277488`, 356 unit / 39 e2e, `docs/phases/g2-tracked-snapshots-report.md` — ⚠️ migration 202607200005 + CRON_SECRET before deploy) · ✅ G3 site hub (375 unit / 46 e2e, adversarial review 1 HIGH + 3 MEDIUM found & fixed, `docs/phases/g3-site-hub-report.md` — SkillPanel/orchestrator deferred, D-022) · 🧾 G4 GSC/GA4 (next) · G5 ads | coordinator + agents | 🔄 in progress |
+| **Growth program G1–G5** | daily-progress dashboard per approved plan (`~/.claude/plans/shimmying-launching-elephant.md`): ✅ G1 growth tab (merged, 30/30 e2e, `docs/phases/g1-growth-overview-report.md`) · ✅ G2 tracked sites + daily snapshots (merged `0277488`, 356 unit / 39 e2e, `docs/phases/g2-tracked-snapshots-report.md` — ⚠️ migration 202607200005 + CRON_SECRET before deploy) · ✅ G3 site hub (375 unit / 46 e2e, adversarial review 1 HIGH + 3 MEDIUM found & fixed, `docs/phases/g3-site-hub-report.md` — SkillPanel/orchestrator deferred, D-022) — **deployed + live-validated 2026-07-21** (`/site/<host>` renders real growth/action-plan/burndown/history data against production Supabase; the "2 resolved · 1 new" diff confirmed correct in prod, proving the stableId fix) · 🧾 G4 GSC/GA4 (next) · G5 ads | coordinator + agents | 🔄 in progress |
 | F3-OPS | Google consent-screen verification, privacy policy page, env rollout | Sonnet + user | 🧾 queued |
 | W1-DFS | DataForSEO serp/keywords/backlinks/labs modules + routes | Sonnet | 🧾 queued (after F1; F2 stubs OK) |
 | W2-GOOGLE | OAuth vault: oauth_states, google_connections (AES-GCM), connect/disconnect, claim-RPC update | Opus | 🧾 queued |
