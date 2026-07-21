@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocalSettings } from "@/app/hooks/useLocalSettings";
 import { Button } from "./ui/Button";
 
-type AuditMode = "single" | "site";
+type AuditMode = "single" | "site" | "agent";
 
 const MAX_URL_LENGTH = 2048;
 
@@ -28,6 +28,12 @@ function validateUrl(value: string): string | null {
 const MODES: { value: AuditMode; label: string; help: string }[] = [
   { value: "single", label: "Single page", help: "Audit one URL." },
   { value: "site", label: "Whole site", help: "Discover and audit up to 500 pages." },
+  // Agent mode is still under active development (SK2-SK4) — hidden in
+  // production so we don't ship a dead route; SK3 removes this gate once
+  // the real orchestrator backend lands.
+  ...(process.env.NODE_ENV !== "production"
+    ? [{ value: "agent" as const, label: "Agent", help: "Plans every relevant check — you confirm the cost first." }]
+    : []),
 ];
 
 export function AuditUrlForm() {
@@ -53,7 +59,8 @@ export function AuditUrlForm() {
     }
     setError(null);
     const encoded = encodeURIComponent(value.trim());
-    router.push(mode === "site" ? `/audit/site?url=${encoded}` : `/audit?url=${encoded}`);
+    const path = mode === "site" ? "/audit/site" : mode === "agent" ? "/audit/agent" : "/audit";
+    router.push(`${path}?url=${encoded}`);
   }
 
   return (
@@ -93,7 +100,7 @@ export function AuditUrlForm() {
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder={mode === "site" ? "https://example.com" : "https://example.com/your-article"}
+          placeholder={mode === "single" ? "https://example.com/your-article" : "https://example.com"}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           aria-invalid={error ? true : undefined}
@@ -101,7 +108,7 @@ export function AuditUrlForm() {
           className="min-w-0 flex-1 bg-transparent px-2 py-2.5 font-mono text-sm text-text-1 placeholder:text-text-3 focus:outline-none"
         />
         <Button type="submit" variant="primary" className="w-full sm:w-auto">
-          {mode === "site" ? "Audit site" : "Run audit"}
+          {mode === "site" ? "Audit site" : mode === "agent" ? "Plan checks" : "Run audit"}
         </Button>
       </div>
       {error && (

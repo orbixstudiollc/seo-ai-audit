@@ -10,6 +10,7 @@ import { KeywordsResult } from "./results/KeywordsResult";
 import { LabsResult } from "./results/LabsResult";
 import { BacklinksResult } from "./results/BacklinksResult";
 import { CompareResult } from "./results/CompareResult";
+import { TechnicalCrawlResult } from "./results/TechnicalCrawlResult";
 
 export interface SkillRegistryEntry {
   /** Short name, used as the panel's Card label/heading. */
@@ -147,6 +148,22 @@ export const SKILL_REGISTRY: Partial<Record<SkillId, SkillRegistryEntry>> = {
     scopeKind: "keyword",
     enabled: false,
     Result: CompareResult,
+  },
+  // Added for SK2's agent-mode handoff row (AgentReportView embeds SkillPanel
+  // for this skill) — the real app/api/skills/technical-crawl route and its
+  // typed §8.1 result payload are SK2-BE/SK3's to land; enabled here so the
+  // handoff row can poll and render something in the meantime.
+  "technical-crawl": {
+    label: "Technical crawl",
+    provider: "DataForSEO",
+    title: "Run a reusable technical crawl",
+    description: "Pulls status codes, crawl depth, on-page scores, and technical issue flags across the site.",
+    costNote: "~$0.05 via DataForSEO OnPage API",
+    startLabel: "Run technical crawl",
+    runningLabel: "Crawling…",
+    scopeKind: "site",
+    enabled: true,
+    Result: TechnicalCrawlResult,
   },
 };
 

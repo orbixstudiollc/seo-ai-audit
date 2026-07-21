@@ -32,6 +32,17 @@ export interface TaskKey {
   fingerprint?: string;
 }
 
+/** Looks up one row by primary key (owner-scoped) — the §8 GET ?id= poll path. */
+export async function taskById(ownerHash: string, id: string): Promise<{ row: ProviderTaskRow | null; error: unknown }> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("provider_tasks")
+    .select(ROW_COLUMNS)
+    .eq("owner_hash", ownerHash)
+    .eq("id", id)
+    .maybeSingle();
+  return { row: data as ProviderTaskRow | null, error };
+}
+
 export async function latestTask(key: TaskKey): Promise<{ row: ProviderTaskRow | null; error: unknown }> {
   const { data, error } = await getSupabaseAdmin()
     .from("provider_tasks")
