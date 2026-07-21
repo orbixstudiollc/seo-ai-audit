@@ -7,7 +7,7 @@ export const LEGACY_HISTORY_V1_KEY = "seo-ai-audit:history:v1";
 export const HISTORY_CHANGED_EVENT = "seo-ai-audit:history-changed";
 export const HISTORY_VERSION = 4;
 
-export type AuditHistoryMode = "single" | "site";
+export type AuditHistoryMode = "single" | "site" | "agent";
 export type AuditHistoryStatus = "started" | "complete" | "partial" | "failed";
 
 export interface SingleAuditHistoryDetails {
@@ -29,7 +29,15 @@ export interface SiteAuditHistoryDetails {
   errorMessage?: string;
 }
 
-export type AuditHistoryDetails = SingleAuditHistoryDetails | SiteAuditHistoryDetails;
+export interface AgentAuditHistoryDetails {
+  kind: "agent";
+  skillsRun: number;
+  skillsFailed: number;
+  pendingCount: number;
+  errorMessage?: string;
+}
+
+export type AuditHistoryDetails = SingleAuditHistoryDetails | SiteAuditHistoryDetails | AgentAuditHistoryDetails;
 
 export interface AuditHistoryRecord {
   id: string;
@@ -85,6 +93,12 @@ function isDetails(value: unknown): value is AuditHistoryDetails {
       Array.isArray(value.commonFindings) && value.commonFindings.length <= 5 && value.commonFindings.every((item) =>
         isRecord(item) && typeof item.issue === "string" && item.issue.length <= 500 && Number.isInteger(item.count) && Number(item.count) >= 0);
   }
+  if (value.kind === "agent") {
+    return errorOk &&
+      Number.isInteger(value.skillsRun) && Number(value.skillsRun) >= 0 &&
+      Number.isInteger(value.skillsFailed) && Number(value.skillsFailed) >= 0 &&
+      Number.isInteger(value.pendingCount) && Number(value.pendingCount) >= 0;
+  }
   return false;
 }
 
@@ -95,7 +109,7 @@ export function isHistoryRecord(value: unknown): value is AuditHistoryRecord {
     typeof value.id === "string" && value.id.length > 0 && value.id.length <= 4096 &&
     typeof value.url === "string" && value.url.length > 0 && value.url.length <= 2048 &&
     typeof value.title === "string" && value.title.length <= 500 &&
-    (value.mode === "single" || value.mode === "site") &&
+    (value.mode === "single" || value.mode === "site" || value.mode === "agent") &&
     (value.status === "started" || value.status === "complete" || value.status === "partial" || value.status === "failed") &&
     typeof value.createdAt === "string" &&
     !Number.isNaN(Date.parse(value.createdAt)) &&

@@ -66,7 +66,7 @@ function AuditDetails({ record, rerun }: { record: AuditHistoryRecord; rerun: st
           <div><dt className="font-mono text-[9px] uppercase tracking-wider text-text-3">Submitted URL</dt><dd className="mt-1 break-all text-text-2">{record.url}</dd></div>
           <div><dt className="font-mono text-[9px] uppercase tracking-wider text-text-3">Started</dt><dd className="mt-1 text-text-2">{new Date(record.createdAt).toLocaleString()}</dd></div>
           <div><dt className="font-mono text-[9px] uppercase tracking-wider text-text-3">Status</dt><dd className="mt-1 capitalize text-text-2">{record.status}</dd></div>
-          <div><dt className="font-mono text-[9px] uppercase tracking-wider text-text-3">Scope</dt><dd className="mt-1 text-text-2">{record.mode === "site" ? `${record.pageCount ?? 0} pages audited` : details?.kind === "single" && details.wordCount !== undefined ? `${details.wordCount.toLocaleString()} words` : "Single page"}</dd></div>
+          <div><dt className="font-mono text-[9px] uppercase tracking-wider text-text-3">Scope</dt><dd className="mt-1 text-text-2">{record.mode === "site" ? `${record.pageCount ?? 0} pages audited` : record.mode === "agent" ? "Agent checks" : details?.kind === "single" && details.wordCount !== undefined ? `${details.wordCount.toLocaleString()} words` : "Single page"}</dd></div>
         </dl>
 
         {!details ? (
@@ -79,6 +79,13 @@ function AuditDetails({ record, rerun }: { record: AuditHistoryRecord; rerun: st
             {details.weakestSignals.length > 0 && <section><h4 className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-text-3">Weakest signals</h4><div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{details.weakestSignals.map((signal) => <div key={signal.id} className="border border-line bg-surface-1 p-2.5"><span className="font-mono text-[9px] text-text-3">{signal.id}</span><strong className="ml-2 font-mono text-sm" style={{ color: scoreBand(signal.score).colorVar }}>{signal.score}</strong><p className="mt-1 text-[11px] leading-snug text-text-2">{SIGNAL_META[signal.id].label}</p></div>)}</div></section>}
             <div className="grid gap-5 md:grid-cols-3"><DetailList title="Blockers" items={details.blockers} /><DetailList title="Question gaps" items={details.questionGaps} /><DetailList title="Citation claims" items={details.citationClaims} /></div>
             <p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Suggested rewrites saved: {details.rewriteCount}</p>
+          </div>
+        ) : details.kind === "agent" ? (
+          <div className="mt-5 space-y-2">
+            {details.errorMessage && <p role="note" className="border border-score-weak bg-[var(--score-weak-tint)] p-3 text-xs text-score-weak">{details.errorMessage}</p>}
+            <p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Checks run: {details.skillsRun}</p>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Checks failed: {details.skillsFailed}</p>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Still running in background: {details.pendingCount}</p>
           </div>
         ) : (
           <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -94,7 +101,9 @@ function AuditDetails({ record, rerun }: { record: AuditHistoryRecord; rerun: st
 }
 
 function AuditHistoryCard({ record, onRemove }: { record: AuditHistoryRecord; onRemove: () => void }) {
-  const rerun = record.mode === "site" ? `/audit/site?url=${encodeURIComponent(record.url)}` : `/audit?url=${encodeURIComponent(record.url)}`;
+  const rerun = record.mode === "site" ? `/audit/site?url=${encodeURIComponent(record.url)}`
+    : record.mode === "agent" ? `/audit/agent?url=${encodeURIComponent(record.url)}`
+    : `/audit?url=${encodeURIComponent(record.url)}`;
   const status = STATUS_STYLE[record.status];
   const overall = averageScore(record);
   let domain = record.url;
@@ -106,7 +115,7 @@ function AuditHistoryCard({ record, onRemove }: { record: AuditHistoryRecord; on
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-wider" style={{ color: status.color, backgroundColor: status.tint }}><span aria-hidden="true">{status.glyph}</span>{status.label}</span>
-            <span className="border border-line-strong px-2 py-1 font-mono text-[9px] uppercase tracking-wider text-text-3">{record.mode === "site" ? "Whole site" : "Single page"}</span>
+            <span className="border border-line-strong px-2 py-1 font-mono text-[9px] uppercase tracking-wider text-text-3">{record.mode === "site" ? "Whole site" : record.mode === "agent" ? "Agent" : "Single page"}</span>
           </div>
           <h2 className="mt-3 truncate text-lg font-semibold tracking-tight">{record.title || domain}</h2>
           <p className="mt-1 truncate font-mono text-[11px] text-text-3">{domain} · {new Date(record.createdAt).toLocaleString()}{record.pageCount !== undefined ? ` · ${record.pageCount} pages` : ""}</p>
@@ -127,7 +136,7 @@ export function DashboardClient() {
   const [ready, setReady] = useState(false);
   const [cloudState, setCloudState] = useState<CloudSyncState>("syncing");
   const [query, setQuery] = useState("");
-  const [mode, setMode] = useState<"all" | "single" | "site">("all");
+  const [mode, setMode] = useState<"all" | "single" | "site" | "agent">("all");
   const [sort, setSort] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
   const [page, setPage] = useState(1);
   const { settings } = useLocalSettings();
@@ -179,7 +188,7 @@ export function DashboardClient() {
       <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.16em] text-text-3">Audit workspace</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Audit dashboard</h1><p className="mt-2 max-w-xl text-sm text-text-2">Every audit query you run, with a durable cloud copy and an offline browser fallback.</p></div><Link href="/" className="inline-flex h-9 items-center bg-text-1 px-4 font-mono text-xs font-medium uppercase tracking-wider text-surface-1 hover:bg-accent-ink">New audit</Link></div>
 
       <Card label={`History (${records.length})`} aside={records.length > 0 ? <Button size="sm" variant="ghost" onClick={clearAll}>Clear history</Button> : undefined} bodyClassName="bg-surface-2">
-        {records.length > 0 && <div className="grid gap-3 border-b border-line bg-surface-1 p-3 sm:grid-cols-3"><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Search<input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Title or domain" className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1" /></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Type<select value={mode} onChange={(event) => { setMode(event.target.value as typeof mode); setPage(1); }} className="h-9 border border-line-strong bg-surface-1 pl-10 pr-10 font-sans text-sm normal-case tracking-normal text-text-1"><option value="all">All</option><option value="single">Single page</option><option value="site">Whole site</option></select></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Sort<select value={sort} onChange={(event) => { setSort(event.target.value as typeof sort); setPage(1); }} className="h-9 border border-line-strong bg-surface-1 pl-3 pr-10 font-sans text-sm normal-case tracking-normal text-text-1"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest score</option><option value="lowest">Lowest score</option></select></label></div>}
+        {records.length > 0 && <div className="grid gap-3 border-b border-line bg-surface-1 p-3 sm:grid-cols-3"><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Search<input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Title or domain" className="h-9 border border-line-strong bg-surface-1 px-3 font-sans text-sm normal-case tracking-normal text-text-1" /></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Type<select value={mode} onChange={(event) => { setMode(event.target.value as typeof mode); setPage(1); }} className="h-9 border border-line-strong bg-surface-1 pl-10 pr-10 font-sans text-sm normal-case tracking-normal text-text-1"><option value="all">All</option><option value="single">Single page</option><option value="site">Whole site</option><option value="agent">Agent</option></select></label><label className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-wider text-text-3">Sort<select value={sort} onChange={(event) => { setSort(event.target.value as typeof sort); setPage(1); }} className="h-9 border border-line-strong bg-surface-1 pl-3 pr-10 font-sans text-sm normal-case tracking-normal text-text-1"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="highest">Highest score</option><option value="lowest">Lowest score</option></select></label></div>}
         {!ready ? <p className="wb-skeleton p-6 text-sm text-text-3">Loading audit history…</p> : records.length === 0 ? <div className="bg-surface-1 p-8 text-center"><h2 className="font-semibold">No audits saved yet</h2><p className="mt-2 text-sm text-text-2">Run your first audit and it will appear here automatically.</p><Link href="/" className="mt-4 inline-block font-mono text-xs uppercase tracking-wider text-accent-ink hover:underline">Start an audit →</Link></div> : visible.length === 0 ? <p className="bg-surface-1 p-8 text-center text-sm text-text-2">No audits match these filters.</p> : <><ul className="grid gap-4 p-3 sm:p-4">{pageRecords.map((record) => <AuditHistoryCard key={record.id} record={record} onRemove={() => { void deleteAuditReport(record.id).catch(() => undefined); void deleteCloudAudit(record.id).then((deleted) => setCloudState(deleted ? "synced" : "local")); persist(removeHistoryRecord(records, record.id)); }} />)}</ul>{visible.length > PAGE_SIZE && <nav aria-label="History pagination" className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface-1 px-4 py-3"><p className="font-mono text-[10px] uppercase tracking-wider text-text-3">Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, visible.length)} of {visible.length}</p><div className="flex items-center gap-3"><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} className="font-mono text-[10px] uppercase tracking-wider text-accent-ink hover:underline disabled:cursor-not-allowed disabled:text-text-3 disabled:no-underline">Previous</button><span className="font-mono text-[10px] uppercase tracking-wider text-text-2">Page {currentPage} of {totalPages}</span><button type="button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} className="font-mono text-[10px] uppercase tracking-wider text-accent-ink hover:underline disabled:cursor-not-allowed disabled:text-text-3 disabled:no-underline">Next</button></div></nav>}</>}
       </Card>
       <p className="text-center text-xs text-text-3" role="status">{cloudState === "syncing" ? "Synchronizing audit history…" : cloudState === "synced" ? "Audit history is synchronized to private cloud storage, with an offline copy in this browser." : "Cloud storage is temporarily unavailable. Audits remain available in this browser and will synchronize later."}</p>

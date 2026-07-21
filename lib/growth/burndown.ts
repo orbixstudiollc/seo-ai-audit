@@ -18,6 +18,9 @@ export function openIssueCount(record: AuditHistoryRecord): number | null {
   if (details.kind === "single") {
     return details.weakestSignals.length + details.blockers.length + details.questionGaps.length;
   }
+  if (details.kind === "agent") {
+    return details.skillsFailed + (details.pendingCount > 0 ? 1 : 0);
+  }
   return details.commonFindings.length + details.worstPages.length + (details.pagesFailed > 0 ? 1 : 0);
 }
 

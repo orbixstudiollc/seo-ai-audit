@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { averageScore } from "@/lib/history";
 import { loadAuditReport, type SavedAuditReport } from "@/lib/reports";
@@ -15,8 +16,11 @@ import { actionPlanForReport, actionPlanForSite, type ActionPlan } from "@/lib/s
 import type { TechnicalSeoPage } from "@/lib/dataforseo/types";
 import { scoreBand } from "@/lib/audit/scoreScale";
 import { Card } from "@/app/components/ui/Card";
+import { Button } from "@/app/components/ui/Button";
 import { ActionPlanPanel } from "@/app/components/audit/ActionPlanPanel";
 import { TechnicalSeoPanel } from "@/app/components/audit/TechnicalSeoPanel";
+import { HUB_SKILL_IDS, SKILL_REGISTRY } from "@/app/components/skills/registry";
+import { SkillPanel } from "@/app/components/skills/SkillPanel";
 import { DeltaChip } from "./SiteGrowthCard";
 import { LensScoreGrid } from "./LensScoreGrid";
 import { TrackToggle } from "./TrackToggle";
@@ -32,23 +36,21 @@ async function loadReport(id: string): Promise<SavedAuditReport | null> {
   return (await loadAuditReport(id)) ?? (await loadCloudAuditReport(id));
 }
 
-/** Action plan for one saved report; `technicalPages` only affects site-kind reports. */
-function planFor(report: SavedAuditReport, technicalPages: readonly TechnicalSeoPage[] | null): ActionPlan {
+/** Action plan for one saved report; `technicalPages` only affects site-kind reports.
+ * Agent reports already carry their own plan from the run's rollup (§9/§10) — no re-synthesis. */
+function planFor(report: SavedAuditReport, technicalPages: readonly TechnicalSeoPage[] | null): ActionPlan | null {
   if (report.kind === "single") return actionPlanForReport(report.report, report.createdAt);
+  if (report.kind === "agent") return report.state.actionPlan;
   return actionPlanForSite(report.state.rootUrl ?? "", report.state.rollup, report.createdAt, technicalPages);
 }
 
 /**
  * G3 site hub: one domain's growth trend, audit history, and current action
- * plan in one place. Pure composition of pieces that already exist and ship
- * today (growth series, tracked-site toggle, technical crawl panel, the
- * action-plan synthesizer) — no new API routes, no new persistence. The
- * SkillPanel generalization (W3-SHELL) and the agent "run everything" button
- * (W7-AGENT) are deliberately NOT built here: neither exists anywhere in the
- * codebase yet, and building either against a single caller would be a
- * speculative framework, not a feature (D-022).
+ * plan in one place, plus (SK3) the agent audit entry point and the
+ * per-domain skill checks (SkillPanel, generalized in SK1/SK2).
  */
 export function SiteHubClient({ host }: { host: string }) {
+  const router = useRouter();
   const { records, ready } = useMergedHistory();
   const [trackedUrls, setTrackedUrls] = useState<ReadonlySet<string> | null>(null);
   const [dailySeries, setDailySeries] = useState<GrowthSnapshot[] | null>(null);
@@ -148,6 +150,10 @@ export function SiteHubClient({ host }: { host: string }) {
     );
   }
 
+  // Per-domain checks below scope to the latest site-kind report's root URL
+  // when one exists, otherwise the domain's most recent audited URL.
+  const skillScopeUrl = (latestReport?.kind === "site" && latestReport.state.rootUrl) || group.latest.url;
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -158,7 +164,14 @@ export function SiteHubClient({ host }: { host: string }) {
             {group.auditCount} audit{group.auditCount === 1 ? "" : "s"} · last {new Date(group.lastAuditedAt).toLocaleDateString()}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/audit/agent?url=${encodeURIComponent(group.latest.url)}`)}
+          >
+            Run agent audit
+          </Button>
           <DeltaChip delta={group.delta} />
           {overall !== null && (
             <strong className="font-mono text-3xl tabular-nums" style={{ color: scoreBand(overall).colorVar }}>
@@ -210,6 +223,15 @@ export function SiteHubClient({ host }: { host: string }) {
         // `technicalPages` reset above rather than reusing stale crawl state.
         <TechnicalSeoPanel key={latestReport.id} auditId={latestReport.id} rootUrl={latestReport.state.rootUrl} limit={500} onPages={setTechnicalPages} />
       )}
+
+      {HUB_SKILL_IDS.map((skillId) => (
+        <SkillPanel
+          key={skillId}
+          skillId={skillId}
+          scope={{ kind: SKILL_REGISTRY[skillId]?.scopeKind ?? "site", url: skillScopeUrl }}
+          labelAs="h2"
+        />
+      ))}
 
       <Card label="Audit history" labelAs="h2">
         <ul className="divide-y divide-line">
