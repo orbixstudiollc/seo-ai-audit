@@ -114,15 +114,27 @@ function commonFindingSeverity(count: number): ActionSeverity {
   return "medium";
 }
 
+/**
+ * A content-derived id, stable across two DIFFERENT plans for the same
+ * issue — unlike an array index, which shifts whenever the source list gets
+ * re-sorted (e.g. `commonFindings` is sorted by count, so "index 0" names a
+ * different issue on every audit). Callers that diff two plans by item id
+ * (site-hub burndown) depend on this stability.
+ */
+function stableId(prefix: string, text: string): string {
+  const slug = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  return `${prefix}-${slug}`;
+}
+
 // --- Per-source builders -----------------------------------------------------
 
 function itemsFromFindings(findings: AuditFindings, url: string | undefined): ActionItem[] {
   const urls = url ? [url] : [];
   const items: ActionItem[] = [];
 
-  findings.blockers.forEach((blocker, i) => {
+  findings.blockers.forEach((blocker) => {
     items.push({
-      id: `blocker-${i}`,
+      id: stableId("blocker", blocker.issue),
       severity: "critical",
       title: blocker.issue,
       detail: blocker.location
@@ -134,9 +146,9 @@ function itemsFromFindings(findings: AuditFindings, url: string | undefined): Ac
     });
   });
 
-  findings.questionGaps.forEach((gap, i) => {
+  findings.questionGaps.forEach((gap) => {
     items.push({
-      id: `gap-${i}`,
+      id: stableId("gap", gap),
       severity: "medium",
       title: `Answer: ${gap}`,
       detail: "A question a thorough article on this topic should answer but doesn't.",
@@ -188,9 +200,9 @@ function itemsFromWeakSignals(scores: ScoreBreakdown, url: string | undefined): 
 function itemsFromRollup(rollup: SiteRollup, rootUrl: string | undefined): ActionItem[] {
   const items: ActionItem[] = [];
 
-  rollup.commonFindings.forEach((finding, i) => {
+  rollup.commonFindings.forEach((finding) => {
     items.push({
-      id: `common-${i}`,
+      id: stableId("common", finding.issue),
       severity: commonFindingSeverity(finding.count),
       title: finding.issue,
       detail: `Recurs on ${finding.count} pages — fix it site-wide, not page by page.`,

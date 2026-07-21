@@ -2,16 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  HISTORY_CHANGED_EVENT,
-  loadHistory,
-  mergeHistoryRecords,
-  storeHistory,
-  type AuditHistoryRecord,
-} from "@/lib/history";
-import { loadCloudHistory } from "@/lib/cloud/history";
-import { ACCOUNT_OWNER_CHANGED_EVENT } from "@/lib/auth/events";
-import { useLocalSettings } from "@/app/hooks/useLocalSettings";
+import { useMergedHistory } from "@/app/hooks/useMergedHistory";
 import { groupByDomain, needsAttention, summarize } from "@/lib/growth/aggregate";
 import { fetchGrowthSeries, listTrackedSites } from "@/lib/growth/client";
 import type { GrowthSnapshot } from "@/lib/growth/types";
@@ -36,9 +27,7 @@ function SummaryTile({ label, value }: { label: string; value: string }) {
  * migration, so the two tabs never race on writes.
  */
 export function GrowthOverview() {
-  const [records, setRecords] = useState<AuditHistoryRecord[]>([]);
-  const [ready, setReady] = useState(false);
-  const { settings } = useLocalSettings();
+  const { records, ready } = useMergedHistory();
   // G2 tracking state. null = API absent/erroring → render exactly the G1
   // surface (no toggles, per-audit sparklines). Never blocks first paint.
   const [trackedUrls, setTrackedUrls] = useState<ReadonlySet<string> | null>(null);
@@ -68,33 +57,6 @@ export function GrowthOverview() {
       });
     }
   }, [trackedUrls]);
-
-  useEffect(() => {
-    let active = true;
-    const syncLocal = () => {
-      setRecords(loadHistory(window.localStorage));
-      setReady(true);
-    };
-    const hydrate = async () => {
-      syncLocal();
-      const cloud = await loadCloudHistory();
-      if (!active || cloud === null) return;
-      const merged = mergeHistoryRecords(cloud, loadHistory(window.localStorage), settings.historyLimit);
-      storeHistory(window.localStorage, merged);
-      setRecords(merged);
-    };
-    void hydrate();
-    const syncAccount = () => void hydrate();
-    window.addEventListener(HISTORY_CHANGED_EVENT, syncLocal);
-    window.addEventListener("storage", syncLocal);
-    window.addEventListener(ACCOUNT_OWNER_CHANGED_EVENT, syncAccount);
-    return () => {
-      active = false;
-      window.removeEventListener(HISTORY_CHANGED_EVENT, syncLocal);
-      window.removeEventListener("storage", syncLocal);
-      window.removeEventListener(ACCOUNT_OWNER_CHANGED_EVENT, syncAccount);
-    };
-  }, [settings.historyLimit]);
 
   const groups = useMemo(() => groupByDomain(records), [records]);
   const attention = useMemo(() => needsAttention(groups), [groups]);
