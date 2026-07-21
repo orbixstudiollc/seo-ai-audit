@@ -5,8 +5,8 @@ updates this file before wrapping up (see the closing ritual in
 `docs/COORDINATION.md`) and appends a handoff entry to `docs/HANDOFF.md`.
 Detail lives in `docs/` (phases, contract, decisions); this file is the map.
 
-Last updated: 2026-07-21 (pm) · by: coordinator session (Fable) — G3 site hub
-deployed + live-validated · branch `main`
+Last updated: 2026-07-21 (pm) · by: coordinator session (Fable) — skills wave
+SK0+SK1 merged; SK2 building · branch `main`
 
 ## Product
 
@@ -80,8 +80,9 @@ Production uses Claude Haiku 4.5 for both scoring and rewrites to minimize LLM c
 | F3-OPS | Google consent-screen verification, privacy policy page, env rollout | Sonnet + user | 🧾 queued |
 | W1-DFS | DataForSEO serp/keywords/backlinks/labs modules + routes | Sonnet | 🧾 queued (after F1; F2 stubs OK) |
 | W2-GOOGLE | OAuth vault: oauth_states, google_connections (AES-GCM), connect/disconnect, claim-RPC update | Opus | 🧾 queued |
-| W3-SHELL | SkillPanel shell + /dev/mock-skills + agent mode entry stub | Sonnet | 🧾 queued |
-| W4-DET-SKILLS | schema/sitemap/hreflang/images/SXO route+renderer pairs | Sonnet | 🧾 queued (per-skill parallel) |
+| **Skills wave SK0–SK4** (plan: `~/.claude/plans/shimmying-launching-elephant.md`, D-023) | ✅ SK0 contract v1.5 + types (`11f60d2`) · ✅ SK1 five $0 skill backends + SkillPanel shell/renderers/mocks/dev page (`63d42c4`, 573 unit / 51 e2e, `docs/phases/sk1-skills-report.md`) · 🔄 SK2 paid DFS skills ∥ agent-mode UI (building) · 🧾 SK3 orchestrator + hub · 🧾 SK4 compare | Sonnet workers, Fable coordinates | 🔄 in progress |
+| W3-SHELL | SkillPanel shell + /dev/mock-skills + agent mode entry stub | — | ✅ absorbed into SK1/SK2 |
+| W4-DET-SKILLS | schema/sitemap/hreflang/images route+renderer pairs (SXO deferred, ai-access added) | — | ✅ absorbed into SK1 |
 | W5-ACTION-PLAN | 4-tier severity synthesizer over existing data (§10) | executor + coordinator wrap-up | ✅ done — merged, all gates green (`docs/phases/w5-action-plan-report.md`) |
 | W6–W10 (wave 2) | GSC/GA4 data routes · agent orchestrator · compete/clusters/briefs · insights home · drift | per plan | ⏸ after wave 1 |
 | WS5 bulk upload | spreadsheet → bulk audit (spec `docs/phases/ws5-bulk-upload-spec.md`, needs refresh vs landed bulk API) | Sonnet | ⏸ parked |

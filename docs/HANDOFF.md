@@ -857,3 +857,43 @@ pattern as every prior smoke this project). No further action needed.
 **Next**: G4 (GSC/GA4 daily ingestion) — blocked on W2-GOOGLE (OAuth vault),
 still queued; needs the user's Google Cloud OAuth app + consent screen work
 (F3-OPS) before it can start.
+
+---
+
+## 2026-07-21 (pm) — coordinator: skills wave SK0+SK1 (plan approved, executing)
+
+**Done**
+- Plan for the skills + agent-mode wave approved (supersedes D-022's
+  deferral; D-023). Scope: W3-SHELL + W4-DET-SKILLS + W1-DFS paid data +
+  full W7 orchestrator + W8 compare subset. All build agents Sonnet (user
+  directive); coordinator reviews per phase.
+- SK0 (`11f60d2`): claude-seo reference pulled 2.2.0→2.2.4; DATA-CONTRACT
+  v1.5 (`ai-access` SkillId, §8.1 typed result payloads, `planOnly` agent
+  request flag); `lib/skills/types.ts` (the shared law); `extraItems` seam
+  in buildActionPlan; D-023.
+- SK1 (`63d42c4`): two parallel Sonnet worktree agents, zero converge
+  conflicts. BE: five $0 deterministic skills (schema/sitemap/hreflang/
+  images/ai-access) as complete-inline §8 routes over the existing SSRF
+  stack + 156 tests. FE: SkillPanelView/SkillPanel (TechnicalSeoPanel
+  generalized), StatGrid, 10 typed renderers, SKILL_REGISTRY (all disabled
+  until live smokes), per-skill mocks, mockAgentRun scripts,
+  /dev/mock-skills design-gate page (its 320px spec caught + root-caused a
+  real flex overflow). Gates: 573 unit / 51 e2e / lint / typecheck / build.
+- SK2 launched (in flight): BE = serp/keywords/labs/backlinks DFS modules +
+  paidSkillRunner + budget-gated routes; FE = useAgentStream + agent
+  confirm-gate UI + /audit/agent (mock-first, NODE_ENV-gated radio).
+
+**Next**
+1. Converge SK2 → gates → merge; then SK3 (orchestrator + agent_runs
+   migration + hub mounting + coordinator adversarial review), SK4
+   (compare + wave wrap + deploy).
+2. USER: push main when convenient; deploy happens on "deploy" after the
+   wave (or per-phase if requested). Registry flags flip per skill only
+   after live deploy smokes.
+
+**Context**: direct Agent-tool builds are blocked by an AI Team OS hook —
+build agents run through the Workflow tool (established G2 precedent).
+SK1-BE notes for SK3: each runSkill module is directly callable by the
+orchestrator for inline completions; routeHelpers' constructors are the
+envelope factories. SK1-FE notes: SkillPanel's initialTaskId prop is the
+handoff/reopen mode the agent report embeds.
