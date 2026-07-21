@@ -231,7 +231,10 @@ export function SiteHubClient({ host }: { host: string }) {
           scope={{ kind: SKILL_REGISTRY[skillId]?.scopeKind ?? "site", url: skillScopeUrl }}
           // Paid routes require an owned audit as their ownership/ledger
           // anchor; free routes ignore it. Without it, paid Run buttons 400.
-          auditId={latestRecord?.id}
+          // Fall back to the latest record of ANY kind: the route needs an
+          // owned audit_runs row, not a saved report (latestRecord is
+          // report-bearing only and can be null for report-less domains).
+          auditId={latestRecord?.id ?? group.latest.id}
           labelAs="h2"
         />
       ))}
