@@ -2,10 +2,16 @@ import type { AgentStreamEvent } from "./types";
 
 /**
  * SSE wire format for `POST /api/audit/agent` (DATA-CONTRACT §9) — same
- * `data:`-per-frame framing as lib/audit/stream.ts, parsing the agent-mode
- * event union instead. Sibling of parseAuditFrame/parseSiteAuditFrame; no
- * producer-side formatter yet because the real route doesn't exist (SK3).
+ * `data:`-per-frame framing as lib/audit/stream.ts. Sibling pair:
+ * `formatAgentEvent` (producer, used by app/api/audit/agent/route.ts) and
+ * `parseAgentFrame` (consumer, used by useAgentStream/tests).
  */
+
+/** Serialize one agent-mode event to an SSE frame. Used by the route handler. */
+export function formatAgentEvent(event: AgentStreamEvent): string {
+  return `data: ${JSON.stringify(event)}\n\n`;
+}
+
 export function parseAgentFrame(frame: string): AgentStreamEvent | null {
   const dataLines = frame
     .split("\n")
