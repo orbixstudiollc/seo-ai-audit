@@ -73,6 +73,12 @@ function sseBody(events: unknown[]): string {
 }
 
 async function routeAgentStream(route: Route, planOnlyBody: unknown[], confirmedBody: unknown[]): Promise<void> {
+  // The real route is owner-gated (401 without the header) — a consumer that
+  // regresses to plain fetch must fail here, not only in production smokes.
+  if (!route.request().headers()["x-seo-audit-owner"]) {
+    await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "invalid_owner" }) });
+    return;
+  }
   const body = (await route.request().postDataJSON()) as { url: string; planOnly?: boolean };
   await route.fulfill({
     status: 200,

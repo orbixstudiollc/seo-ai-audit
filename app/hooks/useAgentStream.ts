@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useState } from "react";
 import type { ActionPlan } from "@/lib/skills/actionPlan";
 import type { AgentStreamEvent, SkillErrorKind, SkillId, SkillTask } from "@/lib/skills/types";
 import { parseAgentFrame } from "@/lib/skills/agentStream";
+import { cloudFetch } from "@/lib/cloud/request";
 
 /**
  * Agent-mode sibling of useSiteAuditStream: streams POST /api/audit/agent
@@ -134,9 +135,11 @@ export async function consumeAgentStream(
   signal: AbortSignal,
   onEvent: (event: AgentStreamEvent) => void,
 ): Promise<void> {
-  const res = await fetch("/api/audit/agent", {
+  // cloudFetch, NOT plain fetch: unlike the anonymous /api/audit/bulk this
+  // consumer was modeled on, /api/audit/agent is owner-gated — a bare fetch
+  // has no x-seo-audit-owner header and 401s on every real run.
+  const res = await cloudFetch("/api/audit/agent", {
     method: "POST",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify(request),
     signal,
   });
