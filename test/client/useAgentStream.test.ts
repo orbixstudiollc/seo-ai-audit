@@ -39,6 +39,24 @@ describe("agentStreamReducer", () => {
     expect(schemaRow?.task).not.toBeNull();
   });
 
+  it("a skill-done carrying a failed task marks the row failed, not complete", () => {
+    // Regression: the server emits failed skill-done events for wall-clock
+    // skips and inline failures; hardcoding "complete" made the view's
+    // error branch unreachable and stranded skipped rows as "Queued".
+    let state = fold(mockAgentPlanOnlyEvents.filter((e) => e.type === "agent:plan"), false);
+    const failedTask: SkillTask = {
+      id: "mock-schema-skipped", skillId: "schema",
+      scope: { kind: "page", url: "https://example.test/" },
+      status: "failed", createdAt: "2026-07-21T00:00:00.000Z", updatedAt: "2026-07-21T00:00:00.000Z",
+      costUsd: 0, resultVersion: 1, result: null,
+      error: { kind: "server", message: "Skipped — the run's wall-clock budget was exhausted before this skill could start." },
+    };
+    state = agentStreamReducer(state, { type: "agent:skill-done", skillId: "schema", task: failedTask });
+    const row = state.skills.find((r) => r.skillId === "schema");
+    expect(row?.status).toBe("failed");
+    expect(row?.task?.error?.message).toContain("Skipped");
+  });
+
   it("resolving every pending task empties pendingTaskIds", () => {
     let state = fold(mockAgentRunEvents, false);
     expect(state.pendingTaskIds).toHaveLength(1);

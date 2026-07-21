@@ -80,7 +80,10 @@ export function agentStreamReducer(state: AgentStreamState, action: AgentAction)
     case "agent:skill-start":
       return { ...state, skills: updateRow(state.skills, action.skillId, { status: "running" }) };
     case "agent:skill-done":
-      return { ...state, skills: updateRow(state.skills, action.skillId, { status: "complete", task: action.task }) };
+      // The event carries the task in its terminal state — a failed task
+      // (including server-side wall-clock skips) must mark the row failed,
+      // or the view's error branch is unreachable from the stream.
+      return { ...state, skills: updateRow(state.skills, action.skillId, { status: action.task.status === "failed" ? "failed" : "complete", task: action.task }) };
     case "agent:skill-handoff":
       return { ...state, skills: updateRow(state.skills, action.skillId, { status: "handoff", taskId: action.taskId }) };
     case "agent:rollup":

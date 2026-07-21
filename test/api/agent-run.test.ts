@@ -253,6 +253,16 @@ describe("POST /api/audit/agent — wall-clock budget", () => {
     expect(agentEventTypes(events).at(-1)).toBe("agent:done");
     expect(events.some((e) => e.type === "agent:rollup")).toBe(true);
 
+    // Skipped skills must still reach the client as terminal skill-done
+    // events (failed tasks) — otherwise their rows strand as "Queued"
+    // forever in the live stream AND every saved snapshot of it.
+    const skillDones = events.filter((e): e is Extract<typeof e, { type: "agent:skill-done" }> => e.type === "agent:skill-done");
+    expect(skillDones.length).toBeGreaterThan(0);
+    for (const done of skillDones) {
+      expect(done.task.status).toBe("failed");
+      expect(done.task.error?.message).toContain("Skipped");
+    }
+
     const skipUpdate = (agentRuns.update as ReturnType<typeof vi.fn>).mock.calls.find((call: unknown[]) => {
       const patch = call[0] as Record<string, unknown>;
       const results = patch.skill_results as Record<string, { status: string; error?: { message: string } }> | undefined;

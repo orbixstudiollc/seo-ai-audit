@@ -350,6 +350,8 @@ async function runAgent(input: RunAgentInput, write: (event: AgentStreamEvent) =
     return;
   }
 
+  let runRowInserted = false;
+  try {
   const doc = computeParsedDocument(fetched.html, true);
   const signalInput = extractBusinessSignalInput(fetched.html, doc.plainText);
   const detection = detectBusinessType(signalInput);
@@ -382,6 +384,7 @@ async function runAgent(input: RunAgentInput, write: (event: AgentStreamEvent) =
     pending_task_ids: [],
     est_cost_usd: estCostUsd,
   });
+  runRowInserted = true;
 
   const skillResults: Record<string, SkillTask> = {};
   const pendingTaskIds: string[] = [];
@@ -400,7 +403,14 @@ async function runAgent(input: RunAgentInput, write: (event: AgentStreamEvent) =
   for (let i = 0; i < inlineItems.length; i++) {
     const item = inlineItems[i];
     if (Date.now() >= deadline) {
-      for (const remaining of inlineItems.slice(i)) skillResults[remaining.skillId] = skippedTask(remaining, fetched.finalUrl, keyword);
+      // Skipped skills must still reach the client as terminal skill-done
+      // events (failed task), or their rows strand as "Queued" forever in
+      // both the live stream and every saved snapshot of it.
+      for (const remaining of inlineItems.slice(i)) {
+        const task = skippedTask(remaining, fetched.finalUrl, keyword);
+        skillResults[remaining.skillId] = task;
+        write({ type: "agent:skill-done", skillId: remaining.skillId, task });
+      }
       await persist({ skill_results: skillResults, actual_cost_usd: actualCostUsd });
       break;
     }
@@ -430,6 +440,24 @@ async function runAgent(input: RunAgentInput, write: (event: AgentStreamEvent) =
 
   await persist({ action_plan: actionPlan, status: "complete" });
   write({ type: "agent:done" });
+  } catch {
+    // Any unexpected throw past the fetch (HTML parsing, detection, DB
+    // writes, rollup) must still tell the client (§9: agent:error, then
+    // nothing) AND leave the durable row terminal — never stuck "running".
+    write({ type: "agent:error", kind: "server", message: "The agent run failed unexpectedly." });
+    if (!input.planOnly) {
+      try {
+        if (runRowInserted) {
+          await db.from("agent_runs").update({ status: "failed", updated_at: new Date().toISOString() }).eq("owner_hash", input.ownerHash).eq("id", runId);
+        } else {
+          await db.from("agent_runs").insert({
+            owner_hash: input.ownerHash, id: runId, url: input.url, business_type: "general",
+            status: "failed", plan: [], skill_results: {}, pending_task_ids: [], est_cost_usd: 0,
+          });
+        }
+      } catch { /* The stream already carried the error; a failed status write must not mask it. */ }
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------
